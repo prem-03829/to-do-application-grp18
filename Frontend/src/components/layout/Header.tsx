@@ -9,6 +9,7 @@ import {
   Search,
   CheckCircle2,
   LogOut,
+  User,
 } from 'lucide-react';
 
 interface HeaderProps {
@@ -58,6 +59,8 @@ export const Header: React.FC<HeaderProps> = ({
         return 'Upcoming Deadlines';
       case '/completed':
         return 'Completed Archive';
+      case '/profile':
+        return 'Profile & Account Settings';
       default:
         return 'TaskFlow';
     }
@@ -204,6 +207,16 @@ export const Header: React.FC<HeaderProps> = ({
               </div>
 
               <div className="py-1">
+                <button
+                  onClick={() => {
+                    setShowUserMenu(false);
+                    navigate('/profile');
+                  }}
+                  className="w-full px-4 py-2 text-xs text-slate-700 hover:bg-slate-50 flex items-center gap-2.5 text-left cursor-pointer"
+                >
+                  <User className="w-4 h-4 text-slate-400" />
+                  <span>Profile & Account</span>
+                </button>
                 <button
                   onClick={() => {
                     setShowUserMenu(false);

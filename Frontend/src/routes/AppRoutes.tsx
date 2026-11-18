@@ -9,6 +9,7 @@ import { TasksPage } from '../pages/TasksPage';
 import { TodayPage } from '../pages/TodayPage';
 import { UpcomingPage } from '../pages/UpcomingPage';
 import { CompletedPage } from '../pages/CompletedPage';
+import { ProfilePage } from '../pages/ProfilePage';
 import { LoginPage } from '../pages/LoginPage';
 import { RegisterPage } from '../pages/RegisterPage';
 import { NotFoundPage } from '../pages/NotFoundPage';
@@ -47,6 +48,7 @@ export const AppRoutes: React.FC = () => {
         <Route path="/today" element={<TodayPage />} />
         <Route path="/upcoming" element={<UpcomingPage />} />
         <Route path="/completed" element={<CompletedPage />} />
+        <Route path="/profile" element={<ProfilePage />} />
       </Route>
 
       {/* 404 Not Found Route */}

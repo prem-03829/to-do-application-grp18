@@ -83,8 +83,20 @@ export const Sidebar: React.FC<SidebarProps> = ({
   const sidebarContent = (
     <div className="flex flex-col h-full bg-white border-r border-slate-200/80 select-none">
       {/* Brand Header */}
-      <div className="flex items-center justify-between p-4 h-16 border-b border-slate-100">
-        <div className="flex items-center gap-2.5 min-w-0">
+      <div
+        className={cn(
+          'relative flex items-center h-16 border-b border-slate-100 transition-all',
+          isCollapsed ? 'justify-center px-2' : 'justify-between px-4'
+        )}
+      >
+        <div
+          onClick={isCollapsed ? onToggleCollapse : undefined}
+          className={cn(
+            'flex items-center gap-2.5 min-w-0',
+            isCollapsed && 'cursor-pointer justify-center hover:opacity-90 transition-opacity'
+          )}
+          title={isCollapsed ? 'Click to expand sidebar' : undefined}
+        >
           <div className="w-9 h-9 rounded-xl bg-gradient-to-tr from-indigo-600 to-indigo-500 flex items-center justify-center text-white shadow-xs shadow-indigo-500/20 shrink-0">
             <Layers className="w-5 h-5 stroke-[2.2]" />
           </div>
@@ -106,18 +118,23 @@ export const Sidebar: React.FC<SidebarProps> = ({
         {/* Mobile close button */}
         <button
           onClick={onMobileClose}
-          className="lg:hidden p-1.5 text-slate-400 hover:text-slate-600 rounded-lg hover:bg-slate-100"
+          className="lg:hidden p-1.5 text-slate-400 hover:text-slate-600 rounded-lg hover:bg-slate-100 cursor-pointer"
         >
           <X className="w-5 h-5" />
         </button>
 
-        {/* Desktop collapse toggle */}
+        {/* Desktop collapse toggle button */}
         <button
           onClick={onToggleCollapse}
           title={isCollapsed ? 'Expand sidebar' : 'Collapse sidebar'}
-          className="hidden lg:flex p-1.5 text-slate-400 hover:text-slate-600 hover:bg-slate-100 rounded-lg transition-colors cursor-pointer"
+          className={cn(
+            'hidden lg:flex items-center justify-center transition-all cursor-pointer',
+            isCollapsed
+              ? 'absolute -right-3 top-5 w-6 h-6 rounded-full bg-white border border-slate-200 text-slate-500 shadow-xs hover:border-indigo-300 hover:text-indigo-600 hover:scale-110 z-40'
+              : 'p-1.5 text-slate-400 hover:text-slate-600 hover:bg-slate-100 rounded-lg'
+          )}
         >
-          {isCollapsed ? <ChevronRight className="w-4 h-4" /> : <ChevronLeft className="w-4 h-4" />}
+          {isCollapsed ? <ChevronRight className="w-3.5 h-3.5 stroke-[2.5]" /> : <ChevronLeft className="w-4 h-4" />}
         </button>
       </div>
 
@@ -189,9 +206,14 @@ export const Sidebar: React.FC<SidebarProps> = ({
       <div className="p-3 border-t border-slate-100 bg-slate-50/50">
         <div
           className={cn(
-            'flex items-center gap-3 p-2 rounded-xl transition-colors',
+            'flex items-center gap-3 p-2 rounded-xl transition-colors hover:bg-slate-100/80 cursor-pointer',
             isCollapsed ? 'justify-center' : 'justify-between'
           )}
+          onClick={() => {
+            onMobileClose();
+            navigate('/profile');
+          }}
+          title="Open Profile & Account Settings"
         >
           <div className="flex items-center gap-2.5 min-w-0">
             <div className="w-8 h-8 rounded-full bg-indigo-600 text-white font-bold flex items-center justify-center text-xs shrink-0 ring-2 ring-indigo-100 overflow-hidden">
@@ -203,7 +225,9 @@ export const Sidebar: React.FC<SidebarProps> = ({
             </div>
             {!isCollapsed && (
               <div className="min-w-0">
-                <p className="text-xs font-bold text-slate-900 truncate">{user?.name || 'User'}</p>
+                <p className="text-xs font-bold text-slate-900 truncate hover:text-indigo-600 transition-colors">
+                  {user?.name || 'User'}
+                </p>
                 <p className="text-[11px] text-slate-400 truncate">{user?.role || user?.email}</p>
               </div>
             )}
@@ -211,7 +235,10 @@ export const Sidebar: React.FC<SidebarProps> = ({
 
           {!isCollapsed && (
             <button
-              onClick={handleLogout}
+              onClick={(e) => {
+                e.stopPropagation();
+                handleLogout();
+              }}
               title="Sign Out"
               className="p-1.5 text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded-lg transition-colors cursor-pointer"
             >
