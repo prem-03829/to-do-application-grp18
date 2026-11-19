@@ -15,6 +15,7 @@ Thumbs.db
 # ==============================
 # Environment & Secrets
 # ==============================
+.env
 .env.local
 .env.*.local
 *.pem
@@ -23,6 +24,7 @@ Thumbs.db
 # ==============================
 # Frontend (React + TypeScript + Vite)
 # ==============================
+node_modules/
 **/node_modules/
 **/dist/
 **/dist-ssr/
@@ -34,9 +36,12 @@ pnpm-debug.log*
 # ==============================
 # Backend (Python + Flask + MySQL)
 # ==============================
+__pycache__/
 **/__pycache__/
+*.pyc
 *.py[cod]
 *$py.class
+.venv/
 **/.venv/
 **/venv/
 **/env/
