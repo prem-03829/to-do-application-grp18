@@ -36,13 +36,21 @@ export const TaskCard: React.FC<TaskCardProps> = ({
       <div>
         {/* Top bar: Category + Status */}
         <div className="flex items-center justify-between gap-2 mb-2.5">
-          {task.category ? (
-            <span className="text-[11px] font-medium text-slate-500 bg-slate-100 px-2 py-0.5 rounded-md border border-slate-200/60">
-              {task.category}
-            </span>
-          ) : (
-            <span />
-          )}
+          <div className="flex items-center gap-1.5 flex-wrap">
+            {task.category && (
+              <span className="text-[11px] font-medium text-slate-500 bg-slate-100 px-2 py-0.5 rounded-md border border-slate-200/60">
+                {task.category}
+              </span>
+            )}
+            {task.assignedToName && (
+              <span className="inline-flex items-center gap-1 text-[10px] font-medium text-indigo-700 bg-indigo-50/80 px-1.5 py-0.5 rounded border border-indigo-200/50">
+                {task.assignedToAvatar && (
+                  <img src={task.assignedToAvatar} alt="" className="w-3 h-3 rounded-full object-cover" />
+                )}
+                <span>{task.assignedToName}</span>
+              </span>
+            )}
+          </div>
           <TaskStatusBadge status={task.status} />
         </div>
 

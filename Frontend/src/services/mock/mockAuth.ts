@@ -1,7 +1,7 @@
-import { User, AuthResponse } from '../../types';
-import { INITIAL_USER } from './mockData';
+import { User, AuthResponse, UserRole } from '../../types';
+import { INITIAL_USERS } from './mockData';
 
-const STORAGE_USERS_KEY = 'taskflow_mock_registered_users';
+const STORAGE_USERS_KEY = 'taskflow_mock_registered_users_v2';
 const STORAGE_CURRENT_USER_KEY = 'taskflow_user';
 const STORAGE_TOKEN_KEY = 'taskflow_token';
 
@@ -9,24 +9,12 @@ const STORAGE_TOKEN_KEY = 'taskflow_token';
 function getRegisteredUsers(): Array<{ email: string; passwordHash: string; user: User }> {
   const data = localStorage.getItem(STORAGE_USERS_KEY);
   if (!data) {
-    // Seed with initial demo user
-    const defaultList = [
-      {
-        email: INITIAL_USER.email.toLowerCase(),
-        passwordHash: 'password123',
-        user: INITIAL_USER,
-      },
-      {
-        email: 'intern@taskflow.dev',
-        passwordHash: 'password123',
-        user: {
-          id: 'usr_demo_02',
-          name: 'College Intern',
-          email: 'intern@taskflow.dev',
-          role: 'Software Intern',
-        },
-      },
-    ];
+    // Seed with initial team members
+    const defaultList = INITIAL_USERS.map((u) => ({
+      email: u.email.toLowerCase(),
+      passwordHash: 'password123',
+      user: u,
+    }));
     localStorage.setItem(STORAGE_USERS_KEY, JSON.stringify(defaultList));
     return defaultList;
   }
@@ -38,7 +26,7 @@ function getRegisteredUsers(): Array<{ email: string; passwordHash: string; user
 }
 
 export const mockAuthService = {
-  async login(credentials: { email: string; password: string }): Promise<AuthResponse> {
+  async login(credentials: { email: string; password: string; role?: UserRole }): Promise<AuthResponse> {
     await new Promise((resolve) => setTimeout(resolve, 300)); // Simulate network latency
 
     const users = getRegisteredUsers();
@@ -47,13 +35,24 @@ export const mockAuthService = {
     );
 
     if (!found) {
-      // For friendly demo experience: if user signs in with any email during internship demo, create or accept it
+      // Demo fallback: create user on-the-fly with requested role
+      const chosenRole: UserRole = credentials.role || 'user';
       const fallbackUser: User = {
         id: `usr_${Date.now()}`,
         name: credentials.email.split('@')[0].replace(/[._]/g, ' ') || 'Demo User',
-        email: credentials.email,
-        role: 'Internship Member',
+        email: credentials.email.toLowerCase().trim(),
+        role: chosenRole,
+        department: chosenRole === 'admin' ? 'Project Administration' : 'Group 18 Member',
+        joinedAt: new Date().toISOString().split('T')[0],
       };
+
+      users.push({
+        email: credentials.email.toLowerCase().trim(),
+        passwordHash: credentials.password,
+        user: fallbackUser,
+      });
+      localStorage.setItem(STORAGE_USERS_KEY, JSON.stringify(users));
+
       const token = `mock-jwt-token-${Date.now()}`;
       localStorage.setItem(STORAGE_CURRENT_USER_KEY, JSON.stringify(fallbackUser));
       localStorage.setItem(STORAGE_TOKEN_KEY, token);
@@ -64,13 +63,27 @@ export const mockAuthService = {
       throw new Error('Invalid email or password. (Hint: use password123)');
     }
 
-    const token = `mock-jwt-token-${found.user.id}-${Date.now()}`;
-    localStorage.setItem(STORAGE_CURRENT_USER_KEY, JSON.stringify(found.user));
+    // If explicit role is selected at login, update user session
+    let activeUser = found.user;
+    if (credentials.role && credentials.role !== activeUser.role) {
+      activeUser = { ...activeUser, role: credentials.role };
+      found.user = activeUser;
+      localStorage.setItem(STORAGE_USERS_KEY, JSON.stringify(users));
+    }
+
+    const token = `mock-jwt-token-${activeUser.id}-${Date.now()}`;
+    localStorage.setItem(STORAGE_CURRENT_USER_KEY, JSON.stringify(activeUser));
     localStorage.setItem(STORAGE_TOKEN_KEY, token);
-    return { user: found.user, token };
+    return { user: activeUser, token };
   },
 
-  async register(data: { name: string; email: string; password: string }): Promise<AuthResponse> {
+  async register(data: {
+    name: string;
+    email: string;
+    password: string;
+    role?: UserRole;
+    adminAccessCode?: string;
+  }): Promise<AuthResponse> {
     await new Promise((resolve) => setTimeout(resolve, 350));
 
     const users = getRegisteredUsers();
@@ -80,11 +93,28 @@ export const mockAuthService = {
       throw new Error('An account with this email already exists.');
     }
 
+    const assignedRole: UserRole = data.role || 'user';
+
+    // Verify Admin Access Code if registering with admin role
+    if (assignedRole === 'admin') {
+      const validCodes = ['TASKFLOW-ADMIN-2025', 'ADMIN2025', 'ADMIN@123', 'ADMIN123'];
+      const enteredCode = (data.adminAccessCode || '').trim().toUpperCase();
+      if (!enteredCode) {
+        throw new Error('Admin Access Code is required to create an admin account.');
+      }
+      if (!validCodes.includes(enteredCode)) {
+        throw new Error('Invalid Admin Access Code. Enter an authorized code (e.g. ADMIN2025) to proceed.');
+      }
+    }
+
     const newUser: User = {
       id: `usr_${Date.now()}`,
       name: data.name.trim(),
       email: normalizedEmail,
-      role: 'College Intern',
+      role: assignedRole,
+      department: assignedRole === 'admin' ? 'Project Administration' : 'Group 18 Member',
+      avatar: `https://api.dicebear.com/7.x/notionists/svg?seed=${encodeURIComponent(data.name)}&backgroundColor=e0e7ff`,
+      joinedAt: new Date().toISOString().split('T')[0],
     };
 
     users.push({
@@ -110,6 +140,12 @@ export const mockAuthService = {
     } catch {
       return null;
     }
+  },
+
+  async getAllUsers(): Promise<User[]> {
+    await new Promise((resolve) => setTimeout(resolve, 150));
+    const usersWithCreds = getRegisteredUsers();
+    return usersWithCreds.map((u) => u.user);
   },
 
   async logout(): Promise<void> {

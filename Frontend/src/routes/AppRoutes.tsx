@@ -10,6 +10,7 @@ import { TodayPage } from '../pages/TodayPage';
 import { UpcomingPage } from '../pages/UpcomingPage';
 import { CompletedPage } from '../pages/CompletedPage';
 import { ProfilePage } from '../pages/ProfilePage';
+import { AdminPage } from '../pages/AdminPage';
 import { LoginPage } from '../pages/LoginPage';
 import { RegisterPage } from '../pages/RegisterPage';
 import { NotFoundPage } from '../pages/NotFoundPage';
@@ -49,6 +50,7 @@ export const AppRoutes: React.FC = () => {
         <Route path="/upcoming" element={<UpcomingPage />} />
         <Route path="/completed" element={<CompletedPage />} />
         <Route path="/profile" element={<ProfilePage />} />
+        <Route path="/admin" element={<AdminPage />} />
       </Route>
 
       {/* 404 Not Found Route */}

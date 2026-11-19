@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useOutletContext } from 'react-router-dom';
-import { useTasks } from '../hooks/useTasks';
+import { useTasks, useUsers } from '../hooks/useTasks';
 import { TaskFiltersState } from '../types';
 import { TaskFilters } from '../components/tasks/TaskFilters';
 import { TaskList } from '../components/tasks/TaskList';
@@ -24,6 +24,7 @@ export const TasksPage: React.FC = () => {
   const [viewMode, setViewMode] = useState<'list' | 'grid'>('list');
 
   const { data: tasks = [], isLoading } = useTasks(filters);
+  const { data: users = [] } = useUsers();
 
   const handleResetFilters = () => {
     setFilters({
@@ -33,6 +34,7 @@ export const TasksPage: React.FC = () => {
       category: 'all',
       sortBy: 'createdAt',
       sortOrder: 'desc',
+      userId: 'all',
     });
   };
 
@@ -69,6 +71,7 @@ export const TasksPage: React.FC = () => {
         onReset={handleResetFilters}
         viewMode={viewMode}
         onViewModeChange={setViewMode}
+        users={users}
       />
 
       {/* Task List / Grid */}

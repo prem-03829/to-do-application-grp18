@@ -4,6 +4,8 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
 import { Task, CreateTaskInput } from '../../types';
 import { CATEGORIES } from '../../services/mock/mockData';
+import { useUsers } from '../../hooks/useTasks';
+import { useAuth } from '../../context/AuthContext';
 import { Input } from '../ui/Input';
 import { Textarea } from '../ui/Textarea';
 import { Select } from '../ui/Select';
@@ -19,6 +21,7 @@ const taskSchema = z.object({
   status: z.enum(['pending', 'in_progress', 'completed']),
   dueDate: z.string().min(1, 'Please select a due date'),
   category: z.string().optional(),
+  userId: z.string().optional(),
 });
 
 type TaskFormData = z.infer<typeof taskSchema>;
@@ -36,6 +39,9 @@ export const TaskForm: React.FC<TaskFormProps> = ({
   onCancel,
   isLoading = false,
 }) => {
+  const { user: currentUser } = useAuth();
+  const { data: users = [] } = useUsers();
+
   const defaultDueDate =
     initialData?.dueDate || new Date().toISOString().split('T')[0];
 
@@ -52,10 +58,13 @@ export const TaskForm: React.FC<TaskFormProps> = ({
       status: initialData?.status || 'pending',
       dueDate: defaultDueDate,
       category: initialData?.category || 'Project Development',
+      userId: initialData?.userId || currentUser?.id || '',
     },
   });
 
   const onFormSubmit = async (data: TaskFormData) => {
+    const assignedUser = users.find((u) => u.id === data.userId);
+
     await onSubmit({
       title: data.title.trim(),
       description: data.description?.trim() || '',
@@ -63,6 +72,9 @@ export const TaskForm: React.FC<TaskFormProps> = ({
       status: data.status,
       dueDate: data.dueDate,
       category: data.category || 'General',
+      userId: data.userId || currentUser?.id,
+      assignedToName: assignedUser?.name || currentUser?.name || 'Self',
+      assignedToAvatar: assignedUser?.avatar || currentUser?.avatar,
     });
   };
 
@@ -85,6 +97,28 @@ export const TaskForm: React.FC<TaskFormProps> = ({
         {...register('description')}
       />
 
+      {/* Assignee Selection (For Admin or general team collaboration) */}
+      {users.length > 0 && (
+        <Select
+          label="Assign To Team Member"
+          error={errors.userId?.message}
+          {...register('userId')}
+        >
+          {currentUser && (
+            <option value={currentUser.id}>
+              Assign to myself ({currentUser.name})
+            </option>
+          )}
+          {users
+            .filter((u) => u.id !== currentUser?.id)
+            .map((u) => (
+              <option key={u.id} value={u.id}>
+                {u.name} ({u.role === 'admin' ? 'Admin Lead' : 'Team Member'})
+              </option>
+            ))}
+        </Select>
+      )}
+
       {/* Priority & Status */}
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
         <Select
@@ -103,7 +137,7 @@ export const TaskForm: React.FC<TaskFormProps> = ({
           {...register('status')}
         >
           <option value="pending">Pending</option>
-          <option value="in_progress">In Progress</option>
+          <option value="in_progress">In Progress (Currently Working On)</option>
           <option value="completed">Completed</option>
         </Select>
       </div>

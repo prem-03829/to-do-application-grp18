@@ -1,5 +1,5 @@
 import React from 'react';
-import { TaskFiltersState } from '../../types';
+import { TaskFiltersState, User } from '../../types';
 import { CATEGORIES } from '../../services/mock/mockData';
 import { Search, Filter, ArrowUpDown, X, LayoutList, LayoutGrid } from 'lucide-react';
 import { Button } from '../ui/Button';
@@ -11,6 +11,7 @@ interface TaskFiltersProps {
   viewMode: 'list' | 'grid';
   onViewModeChange: (mode: 'list' | 'grid') => void;
   categories?: string[];
+  users?: User[];
 }
 
 export const TaskFilters: React.FC<TaskFiltersProps> = ({
@@ -20,12 +21,14 @@ export const TaskFilters: React.FC<TaskFiltersProps> = ({
   viewMode,
   onViewModeChange,
   categories = CATEGORIES as unknown as string[],
+  users,
 }) => {
   const isFiltered =
     filters.search !== '' ||
     filters.status !== 'all' ||
     filters.priority !== 'all' ||
-    filters.category !== 'all';
+    filters.category !== 'all' ||
+    (filters.userId && filters.userId !== 'all');
 
   return (
     <div className="space-y-3 bg-white p-4 rounded-xl border border-slate-200/80 shadow-2xs">
@@ -137,6 +140,22 @@ export const TaskFilters: React.FC<TaskFiltersProps> = ({
             </option>
           ))}
         </select>
+
+        {/* Member / Assignee Filter */}
+        {users && users.length > 0 && (
+          <select
+            value={filters.userId || 'all'}
+            onChange={(e) => onChange({ ...filters, userId: e.target.value })}
+            className="bg-slate-50 hover:bg-slate-100 border border-slate-200 text-slate-700 rounded-lg px-2.5 py-1.5 text-xs font-medium focus:ring-2 focus:ring-indigo-500/20 focus:outline-none cursor-pointer"
+          >
+            <option value="all">All Members</option>
+            {users.map((u) => (
+              <option key={u.id} value={u.id}>
+                {u.name}
+              </option>
+            ))}
+          </select>
+        )}
 
         {/* Sort Controls */}
         <div className="flex items-center gap-1.5 ml-auto">

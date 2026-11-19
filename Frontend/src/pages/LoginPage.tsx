@@ -4,15 +4,17 @@ import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
 import { useAuth } from '../context/AuthContext';
+import { UserRole } from '../types';
 import { Input } from '../components/ui/Input';
 import { Button } from '../components/ui/Button';
 import { Checkbox } from '../components/ui/Checkbox';
-import { Layers, Eye, EyeOff, Sparkles } from 'lucide-react';
+import { Layers, Eye, EyeOff, Sparkles, User, ShieldCheck } from 'lucide-react';
 import { toast } from 'sonner';
 
 const loginSchema = z.object({
   email: z.string().min(1, 'Email is required').email('Please enter a valid email address'),
   password: z.string().min(6, 'Password must be at least 6 characters'),
+  role: z.enum(['user', 'admin']),
 });
 
 type LoginFormData = z.infer<typeof loginSchema>;
@@ -25,8 +27,7 @@ export const LoginPage: React.FC = () => {
   const [showPassword, setShowPassword] = useState(false);
   const [rememberMe, setRememberMe] = useState(true);
   const [serverError, setServerError] = useState<string | null>(null);
-
-  const from = (location.state as any)?.from?.pathname || '/';
+  const [selectedRole, setSelectedRole] = useState<UserRole>('user');
 
   const {
     register,
@@ -38,8 +39,21 @@ export const LoginPage: React.FC = () => {
     defaultValues: {
       email: 'rushikesh.jagtap@college.edu',
       password: 'password123',
+      role: 'user',
     },
   });
+
+  const handleSelectRole = (role: UserRole) => {
+    setSelectedRole(role);
+    setValue('role', role);
+    if (role === 'admin') {
+      setValue('email', 'admin@taskflow.dev');
+      setValue('password', 'password123');
+    } else {
+      setValue('email', 'rushikesh.jagtap@college.edu');
+      setValue('password', 'password123');
+    }
+  };
 
   const onSubmit = async (data: LoginFormData) => {
     setServerError(null);
@@ -47,18 +61,20 @@ export const LoginPage: React.FC = () => {
       await login({
         email: data.email,
         password: data.password,
+        role: data.role,
       });
-      toast.success('Welcome back to TaskFlow!');
-      navigate(from, { replace: true });
+      toast.success(
+        data.role === 'admin'
+          ? 'Welcome, Administrator! Team Hub ready.'
+          : 'Welcome back to TaskFlow!'
+      );
+      const destination =
+        (location.state as any)?.from?.pathname || (data.role === 'admin' ? '/admin' : '/');
+      navigate(destination, { replace: true });
     } catch (err: any) {
       setServerError(err.message || 'Login failed. Please check your credentials.');
       toast.error('Authentication error');
     }
-  };
-
-  const handleFillDemo = () => {
-    setValue('email', 'rushikesh.jagtap@college.edu');
-    setValue('password', 'password123');
   };
 
   return (
@@ -80,22 +96,75 @@ export const LoginPage: React.FC = () => {
 
       <div className="mt-8 sm:mx-auto sm:w-full sm:max-w-md">
         <div className="bg-white py-8 px-6 shadow-xl shadow-slate-200/50 rounded-2xl border border-slate-200/80 sm:px-10 space-y-6">
-          {/* Quick Demo Fill Pill */}
+          {/* Role Selector Tabs */}
+          <div>
+            <label className="block text-xs font-semibold text-slate-700 tracking-wide uppercase mb-2">
+              Select Your Role
+            </label>
+            <div className="grid grid-cols-2 gap-2.5 p-1 bg-slate-100 rounded-xl border border-slate-200">
+              <button
+                type="button"
+                onClick={() => handleSelectRole('user')}
+                className={`flex items-center justify-center gap-2 py-2 px-3 rounded-lg text-xs font-bold transition-all cursor-pointer ${
+                  selectedRole === 'user'
+                    ? 'bg-white text-indigo-700 shadow-xs'
+                    : 'text-slate-600 hover:text-slate-900'
+                }`}
+              >
+                <User className="w-4 h-4" />
+                <span>Normal User</span>
+              </button>
+              <button
+                type="button"
+                onClick={() => handleSelectRole('admin')}
+                className={`flex items-center justify-center gap-2 py-2 px-3 rounded-lg text-xs font-bold transition-all cursor-pointer ${
+                  selectedRole === 'admin'
+                    ? 'bg-white text-indigo-700 shadow-xs'
+                    : 'text-slate-600 hover:text-slate-900'
+                }`}
+              >
+                <ShieldCheck className="w-4 h-4 text-indigo-600" />
+                <span>Admin / Lead</span>
+              </button>
+            </div>
+            <p className="text-[11px] text-slate-500 mt-1.5 px-0.5">
+              {selectedRole === 'admin'
+                ? '⚡ Admin view allows monitoring active team members, tasks in-progress, and overall progress.'
+                : '💼 Normal user view manages personal tasks, deadlines, and daily focus.'}
+            </p>
+          </div>
+
+          {/* Quick Demo Pre-fill Pill */}
           <div className="p-3 bg-indigo-50/70 border border-indigo-100 rounded-xl flex items-center justify-between">
             <div className="flex items-center gap-2">
               <Sparkles className="w-4 h-4 text-indigo-600 shrink-0" />
               <div className="text-[11px] text-slate-600">
-                <span className="font-semibold text-indigo-900 block">Demo Credentials Ready</span>
-                <span>Pre-filled for immediate testing</span>
+                <span className="font-semibold text-indigo-900 block">
+                  {selectedRole === 'admin' ? 'Admin Demo Loaded' : 'User Demo Loaded'}
+                </span>
+                <span>Pre-filled with test credentials</span>
               </div>
             </div>
-            <button
-              type="button"
-              onClick={handleFillDemo}
-              className="text-[11px] font-semibold text-indigo-600 hover:text-indigo-800 bg-white px-2 py-1 rounded-md border border-indigo-200 shadow-2xs cursor-pointer"
-            >
-              Fill Demo
-            </button>
+            <div className="flex items-center gap-1.5">
+              <button
+                type="button"
+                onClick={() => handleSelectRole('user')}
+                className={`text-[11px] font-semibold px-2 py-1 rounded-md border shadow-2xs cursor-pointer ${
+                  selectedRole === 'user' ? 'bg-indigo-600 text-white border-indigo-600' : 'bg-white text-slate-600 border-slate-200'
+                }`}
+              >
+                User
+              </button>
+              <button
+                type="button"
+                onClick={() => handleSelectRole('admin')}
+                className={`text-[11px] font-semibold px-2 py-1 rounded-md border shadow-2xs cursor-pointer ${
+                  selectedRole === 'admin' ? 'bg-indigo-600 text-white border-indigo-600' : 'bg-white text-slate-600 border-slate-200'
+                }`}
+              >
+                Admin
+              </button>
+            </div>
           </div>
 
           {serverError && (
@@ -105,6 +174,8 @@ export const LoginPage: React.FC = () => {
           )}
 
           <form className="space-y-4" onSubmit={handleSubmit(onSubmit)}>
+            <input type="hidden" {...register('role')} />
+
             {/* Email */}
             <Input
               label="Email address"
@@ -154,7 +225,7 @@ export const LoginPage: React.FC = () => {
               className="w-full mt-2"
               isLoading={isSubmitting}
             >
-              Sign In
+              Sign In as {selectedRole === 'admin' ? 'Admin' : 'User'}
             </Button>
           </form>
 

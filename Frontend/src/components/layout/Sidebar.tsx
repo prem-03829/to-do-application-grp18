@@ -13,6 +13,7 @@ import {
   Layers,
   Sparkles,
   X,
+  ShieldCheck,
 } from 'lucide-react';
 import { cn } from '../../lib/utils';
 
@@ -78,6 +79,16 @@ export const Sidebar: React.FC<SidebarProps> = ({
       count: counts?.completed,
       countVariant: 'emerald',
     },
+    ...(user?.role === 'admin'
+      ? [
+          {
+            to: '/admin',
+            label: 'Admin Hub',
+            icon: <ShieldCheck className="w-4 h-4 shrink-0 text-indigo-600" />,
+            badge: 'Admin',
+          },
+        ]
+      : []),
   ];
 
   const sidebarContent = (
@@ -165,6 +176,11 @@ export const Sidebar: React.FC<SidebarProps> = ({
             {!isCollapsed && (
               <>
                 <span className="flex-1 truncate">{item.label}</span>
+                {item.badge && (
+                  <span className="text-[10px] font-bold bg-indigo-100 text-indigo-700 px-1.5 py-0.5 rounded border border-indigo-200">
+                    {item.badge}
+                  </span>
+                )}
                 {item.count !== undefined && item.count > 0 && (
                   <span
                     className={cn(

@@ -10,6 +10,7 @@ import {
   CheckCircle2,
   LogOut,
   User,
+  ShieldCheck,
 } from 'lucide-react';
 
 interface HeaderProps {
@@ -61,6 +62,8 @@ export const Header: React.FC<HeaderProps> = ({
         return 'Completed Archive';
       case '/profile':
         return 'Profile & Account Settings';
+      case '/admin':
+        return 'Team Progress & Admin Hub';
       default:
         return 'TaskFlow';
     }
@@ -207,6 +210,18 @@ export const Header: React.FC<HeaderProps> = ({
               </div>
 
               <div className="py-1">
+                {user?.role === 'admin' && (
+                  <button
+                    onClick={() => {
+                      setShowUserMenu(false);
+                      navigate('/admin');
+                    }}
+                    className="w-full px-4 py-2 text-xs font-semibold text-indigo-700 hover:bg-indigo-50/70 flex items-center gap-2.5 text-left cursor-pointer"
+                  >
+                    <ShieldCheck className="w-4 h-4 text-indigo-600" />
+                    <span>Admin Team Hub</span>
+                  </button>
+                )}
                 <button
                   onClick={() => {
                     setShowUserMenu(false);
