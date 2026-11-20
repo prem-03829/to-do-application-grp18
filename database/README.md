@@ -26,7 +26,7 @@ Status: Schema complete, 23/23 verification tests passing, MySQL 8.0.44 tested.
 
 ```
 database/
-├── .env.example              Template containing required database environment variable placeholders.
+├── .env.example              Reference template for database connection settings (not required by the application).
 ├── README.md                 Comprehensive technical documentation and operational guide.
 ├── er-diagram.md             Entity-Relationship documentation containing Mermaid ER specification.
 ├── er-diagram.png            Rendered visual export of the database Entity-Relationship model.
@@ -286,27 +286,19 @@ Backend applications (such as Flask using SQLAlchemy and PyMySQL) connect using 
 mysql+pymysql://todo_user:your_password@localhost:3306/todo_db
 ```
 
-### Environment Variables (`.env`)
+### Environment Configuration
 
-Copy `database/.env.example` to create your local `.env` file in your application directory:
+The backend uses `Backend/.env` as the single source of truth for database connection settings.
 
-```env
-DB_HOST=localhost
-DB_PORT=3306
-DB_NAME=todo_db
-DB_USER=todo_user
-DB_PASSWORD=your_password
-```
+Create `Backend/.env` using `Backend/.env.example` as a reference and configure the `DATABASE_URL` connection string.
 
-Important rules:
-- Every developer maintains their own local `.env` file.
-- The `.env` file contains sensitive credentials and is ignored by `.gitignore`. Never commit it to git.
-- The application backend must connect as `todo_user`, never as `root`.
-- Migration Note: If the backend team adopts Flask-Migrate (Alembic) to manage migrations in later sprints, `todo_user` will require Data Definition Language (DDL) permissions. You will need to grant:
-  ```sql
-  GRANT CREATE, ALTER, DROP, INDEX, REFERENCES ON todo_db.* TO 'todo_user'@'localhost';
-  FLUSH PRIVILEGES;
-  ```
+The `database/.env` file is not required. No database scripts, migrations, tests, or application code load it. `database/.env.example` is retained only as a reference template.
+
+**Important:**
+- Keep database credentials in `Backend/.env`.
+- Never commit `.env` files or expose database passwords.
+- The backend must connect using the limited-privilege `todo_user` account, not `root`.
+- The database SQL scripts are executed directly through the MySQL CLI and do not require a `.env` file.
 
 ---
 

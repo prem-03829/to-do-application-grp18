@@ -26,8 +26,7 @@ Backend/
 Frontend: in `Frontend/.env` set `VITE_USE_MOCK_API=false` and `VITE_API_BASE_URL=http://localhost:5000/api`.
 
 ## Database
-Works with the tables in `database/schema.sql` (users, categories, tasks). The backend adds a `role`
-column to `users` by itself if it is missing, and creates tables that do not exist yet.
+Works with the tables in `database/schema.sql` (users, categories, tasks). Fresh databases create the schema directly from `database/schema.sql`. If an existing database is missing the `role` column, manually run `database/migrations/001_add_user_role.sql`.
 
 ### Setup with MySQL
 1. Install MySQL 8.0.16+ and run `database/schema.sql` from the `db` branch (creates `todo_db`).
