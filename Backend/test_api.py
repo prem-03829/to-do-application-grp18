@@ -48,7 +48,7 @@ assert r.get_json()["role"] == "user"; print("PASS register cannot make admin")
 login = check("admin login", c.post("/api/auth/login", json={"email": "admin@college.edu", "password": "Admin@123"}), 200).get_json()
 assert login["user"]["role"] == "admin"
 ha = {"Authorization": f"Bearer {login['token']}"}
-for url in ("/api/admin/users", "/api/admin/tasks", "/api/admin/stats", "/api/admin/users/1/tasks"):
+for url in ("/api/admin/users", "/api/admin/tasks", "/api/admin/stats", "/api/admin/users/1/tasks", "/api/admin/team-progress"):
     check(f"user blocked from {url}", c.get(url, headers=h2), 403)
 check("no token admin", c.get("/api/admin/users"), 401)
 users = check("admin users", c.get("/api/admin/users", headers=ha), 200).get_json()
@@ -67,6 +67,20 @@ check("admin bad userId", c.get("/api/admin/tasks?userId=abc", headers=ha), 400)
 st = check("admin stats", c.get("/api/admin/stats", headers=ha), 200).get_json()
 assert st["totalUsers"] == 3 and st["totalTasks"] == 2 and st["completed"] == 1 and st["completionRate"] == 50, st
 print(st)
+tp = check("team-progress", c.get("/api/admin/team-progress", headers=ha), 200).get_json()
+assert [e["user"]["name"] for e in tp] == ["A", "B", "Sneaky"], tp
+ea = tp[0]
+assert set(ea) == {"user", "totalTasks", "inProgressTasks", "otherTasks", "completedCount",
+                   "pendingCount", "inProgressCount", "completionRate"}, set(ea)
+assert (ea["totalTasks"], ea["completedCount"], ea["pendingCount"], ea["inProgressCount"], ea["completionRate"]) == (2, 1, 1, 0, 50)
+assert ea["inProgressTasks"] == [] and len(ea["otherTasks"]) == 2 and ea["otherTasks"][0]["id"]
+bt = c.post("/api/tasks", headers=h2, json={"title": "B work", "status": "in_progress"}).get_json()
+eb = c.get("/api/admin/team-progress", headers=ha).get_json()[1]
+assert eb["inProgressCount"] == 1 and eb["inProgressTasks"][0]["title"] == "B work" and eb["completionRate"] == 0
+# admin cannot change another user's task through the normal task API
+check("admin cannot toggle user task", c.patch(f"/api/tasks/{bt['id']}/toggle", headers=ha), 404)
+c.delete(f"/api/tasks/{bt['id']}", headers=h2)
+print("PASS team-progress")
 
 check("delete", c.delete(f"/api/tasks/{t['id']}", headers=h), 204)
 check("logout", c.post("/api/auth/logout", headers=h), 200)

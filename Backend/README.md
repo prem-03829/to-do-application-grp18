@@ -1,4 +1,4 @@
-# To-Do App Backend 
+# To-Do App Backend (Flask + MySQL)
 
 API for the to-do app: user login, task CRUD, and an admin role.
 
@@ -45,4 +45,5 @@ Status: `pending`, `in_progress`, `completed`. Priority: `low`, `medium`, `high`
 | GET | /api/admin/users | all users + task counts and completion % |
 | GET | /api/admin/users/<id>/tasks?status= | tasks of one user |
 | GET | /api/admin/tasks?status=&userId=&q= | all tasks with owner name and email |
+| GET | /api/admin/team-progress | per user: tasks in progress, other tasks, counts, completion % (used by the admin page) |
 | GET | /api/admin/stats | overall progress + progress per user |

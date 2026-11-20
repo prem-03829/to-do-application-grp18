@@ -1,4 +1,4 @@
-"""To-Do App backend"""
+"""To-Do App backend: Flask + SQLAlchemy (MySQL) + JWT. Run: python main.py"""
 import os
 from functools import wraps
 from datetime import date, datetime, timedelta
@@ -331,6 +331,31 @@ def admin_tasks():
         q = q.filter(Task.title.ilike(f"%{a['q']}%"))
     rows = q.order_by(Task.created_at.desc()).all()
     return jsonify([dict(t.to_dict(), userName=u.name, userEmail=u.email) for t, u in rows])
+
+
+@app.get("/api/admin/team-progress")
+@admin_only
+def admin_team_progress():
+    """One entry per user, in the shape the frontend admin page reads."""
+    users = User.query.filter_by(role="user").order_by(User.name).all()
+    by_user = {u.id: [] for u in users}
+    for t in Task.query.order_by(Task.created_at.desc()).all():
+        if t.user_id in by_user:
+            by_user[t.user_id].append(t)
+    result = []
+    for u in users:
+        tasks, p = by_user[u.id], progress(by_user[u.id])
+        result.append({
+            "user": u.to_dict(),
+            "totalTasks": p["totalTasks"],
+            "inProgressTasks": [t.to_dict() for t in tasks if t.status == "in_progress"],
+            "otherTasks": [t.to_dict() for t in tasks if t.status != "in_progress"],
+            "completedCount": p["completed"],
+            "pendingCount": p["pending"],
+            "inProgressCount": p["inProgress"],
+            "completionRate": p["completionRate"],
+        })
+    return jsonify(result)
 
 
 @app.get("/api/admin/stats")
