@@ -33,10 +33,28 @@ export const authService = {
     if (USE_MOCK) {
       return mockAuthService.register(payload);
     }
-    const response = await apiClient.post<AuthResponse>('/auth/register', payload);
-    localStorage.setItem('taskflow_token', response.data.token);
-    localStorage.setItem('taskflow_user', JSON.stringify(response.data.user));
-    return response.data;
+    const response = await apiClient.post<any>('/auth/register', payload);
+    let token = response.data?.token;
+    let user = response.data?.user || response.data;
+    if (!token && user && payload.password) {
+      try {
+        const loginRes = await apiClient.post<AuthResponse>('/auth/login', {
+          email: payload.email,
+          password: payload.password,
+        });
+        token = loginRes.data.token;
+        user = loginRes.data.user;
+      } catch {
+        // If login fails immediately, proceed with available user info
+      }
+    }
+    if (token) {
+      localStorage.setItem('taskflow_token', token);
+    }
+    if (user) {
+      localStorage.setItem('taskflow_user', JSON.stringify(user));
+    }
+    return { token: token || '', user };
   },
 
   async getCurrentUser(): Promise<User | null> {
@@ -56,7 +74,12 @@ export const authService = {
       return mockAuthService.getAllUsers();
     }
     try {
-      const response = await apiClient.get<User[]>('/users');
+      const stored = localStorage.getItem('taskflow_user');
+      const currentUser = stored ? JSON.parse(stored) : null;
+      if (currentUser?.role !== 'admin') {
+        return [];
+      }
+      const response = await apiClient.get<User[]>('/admin/users');
       return response.data;
     } catch {
       return [];
