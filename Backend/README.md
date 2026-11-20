@@ -16,6 +16,12 @@ Frontend: in `Frontend/.env` set `VITE_USE_MOCK_API=false` and `VITE_API_BASE_UR
 Works with the tables in `database/schema.sql` (users, categories, tasks). The backend adds a `role`
 column to `users` by itself if it is missing, and creates tables that do not exist yet.
 
+### Setup with MySQL
+1. Install MySQL 8.0.16+ and run `database/schema.sql` from the `db` branch (creates `todo_db`).
+2. Copy `.env.example` to `.env` and set `DATABASE_URL=mysql+pymysql://root:YOUR_PASSWORD@localhost:3306/todo_db`
+3. Run `pip install -r requirements.txt`, then `python main.py`
+4. Admin login is set in `ADMIN_EMAIL` / `ADMIN_PASSWORD` in `.env`
+
 ## Login and roles
 - Send the token as `Authorization: Bearer <token>`.
 - Two roles: `user` and `admin`. Login returns `{ token, user: { id, name, email, role } }`.
