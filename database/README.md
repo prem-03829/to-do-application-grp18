@@ -1,20 +1,23 @@
 # Database Documentation: To-Do Application (todo_db)
 
-This directory contains the database architecture, Data Definition Language (DDL) schemas, deterministic seed data, optimized reference queries, automated schema verification tests, and Entity-Relationship (ER) models for the full-stack To-Do application. It serves as the single source of truth for the database tier while backend models and frontend client interfaces are being developed.
+This directory contains the database architecture, Data Definition Language (DDL) schemas, schema migration scripts, deterministic seed data, optimized reference queries, automated schema verification tests, and Entity-Relationship (ER) models for the full-stack To-Do application. It serves as the single source of truth for the database tier while backend models and frontend client interfaces are being developed.
 
-Status: Schema complete, 17/17 verification tests passing, MySQL 8.0.44 tested.
+Status: Schema complete, 23/23 verification tests passing, MySQL 8.0.44 tested.
 
 ---
 
 ## 2. Features
 
 - Three normalized tables: `users`, `categories`, and `tasks` designed under Third Normal Form (3NF).
+- Role-based account modeling: Native `role` attribute on `users` with CHECK constraint supporting `'user'` and `'admin'` privileges.
 - Strict integrity constraints: Mandatory NOT NULL attributes, table-level UNIQUE constraints, and native CHECK constraints.
 - Automated referential integrity: Cascading deletions (`ON DELETE CASCADE`) for user-owned records and nullification (`ON DELETE SET NULL`) for category-associated tasks.
 - Performance indexing: Dedicated B-Tree indexes for single-column lookups (`user_id`, `due_date`) and composite filtering (`user_id`, `status`).
 - Per-user data isolation: Query design pattern enforcing `user_id` filtering on all operations to prevent cross-tenant data leaks.
+- Administrative monitoring: Dedicated system-wide analytics queries for admin oversight without violating regular user isolation boundaries.
+- Incremental migrations: Forward schema migration scripts for existing databases alongside fresh full-schema DDL.
 - Idempotent scripts: Re-runnable `schema.sql` and `seed.sql` with deterministic sequence resets.
-- Zero-residual verification suite: Automated test harness running in an isolated transaction that tests 16 structural checks plus a version check and issues an explicit `ROLLBACK`.
+- Zero-residual verification suite: Automated test harness running in an isolated transaction that tests 22 structural checks plus a version check and issues an explicit `ROLLBACK`.
 - Backup and restore procedures: Platform-specific command patterns for lossless database snapshots and restoration.
 
 ---
@@ -29,9 +32,11 @@ database/
 ├── er-diagram.png            Rendered visual export of the database Entity-Relationship model.
 ├── queries.sql               Parameterized application queries covering CRUD and dashboard metrics.
 ├── schema.sql                Idempotent DDL script defining tables, keys, constraints, and indexes.
-├── seed.sql                  Deterministic mock data (2 users, 3 categories, 9 tasks) for development.
+├── seed.sql                  Deterministic mock data (3 users, 3 categories, 9 tasks) for development.
 ├── backup/
 │   └── todo_db.sql           Database backup dump generated via mysqldump (generated file).
+├── migrations/
+│   └── 001_add_user_role.sql Forward migration to add role column to existing databases without data loss.
 └── tests/
     ├── run_tests.md          Detailed test execution manual and output interpretation guide.
     └── verify_schema.sql     Automated SQL test suite running in a transaction with rollback.
@@ -44,7 +49,7 @@ Note: `database/backup/todo_db.sql` is a generated file produced when executing 
 ## 4. Prerequisites
 
 - MySQL Server 8.0.16 or newer:
-  - MySQL versions prior to 8.0.16 parse `CHECK` constraints syntactically but silently ignore them during execution. MySQL 8.0.16+ is strictly required to enforce allowed values for task status and priority.
+  - MySQL versions prior to 8.0.16 parse `CHECK` constraints syntactically but silently ignore them during execution. MySQL 8.0.16+ is strictly required to enforce allowed values for user roles, task status, and priority.
 - Verification command:
   ```bash
   mysql --version
@@ -72,6 +77,7 @@ erDiagram
         varchar_100 name "NOT NULL"
         varchar_255 email "NOT NULL, UNIQUE"
         varchar_255 password_hash "NOT NULL"
+        varchar_10 role "NOT NULL, DEFAULT 'user'"
     }
 
     categories {
@@ -103,6 +109,7 @@ erDiagram
 | `name` | `VARCHAR(100)` | NO | None | None | Full display name of the user. |
 | `email` | `VARCHAR(255)` | NO | UNIQUE | None | Unique login email address. |
 | `password_hash` | `VARCHAR(255)` | NO | None | None | Securely hashed password string (e.g., bcrypt/Argon2). |
+| `role` | `VARCHAR(10)` | NO | CHECK (`role` IN ('user', 'admin')) | `'user'` | Account access level for application authorization. |
 
 #### Table: `categories`
 
@@ -134,11 +141,13 @@ erDiagram
 
 ### Allowed Values
 
+- `users.role`: `'user'`, `'admin'`.
 - `tasks.status`: `'pending'`, `'in_progress'`, `'completed'`.
 - `tasks.priority`: `'low'`, `'medium'`, `'high'`.
 
 ### Design Decisions and Rationale
 
+- `role` Column on `users`: Storing role directly as a `VARCHAR(10)` with a CHECK constraint avoids unnecessary join tables for simple role hierarchies while ensuring strict schema-level data validation.
 - `ON DELETE CASCADE` on `user_id`: When a user account is deleted, all their personal categories and tasks are automatically purged to prevent orphan data and comply with data privacy principles.
 - `ON DELETE SET NULL` on `category_id`: Categories are organizational labels. Deleting a category must not destroy a user's actual tasks; instead, the foreign key resets to `NULL`, leaving the task in an uncategorized state.
 - `UNIQUE(user_id, name)` on `categories`: Users cannot create two categories with identical names. However, separate users can each have their own category with the same name (e.g., both User 1 and User 2 can have a "Work" category).
@@ -157,7 +166,52 @@ erDiagram
 
 ---
 
-## 6. Quick Start (Run It Yourself)
+## 6. Roles and Admin
+
+The application supports two user roles:
+- `user`: Standard account. Allowed to create, edit, filter, and delete their own tasks and categories.
+- `admin`: Elevated administrative account. Allowed to view system-wide user rosters, monitor active tasks in progress across users, and inspect aggregate completion progress.
+
+### How to Create an Admin Account
+To create a functional administrator account:
+1. Register a normal user through the application registration form (which defaults strictly to `role = 'user'`).
+2. Have an authorized database administrator upgrade the user's role directly in MySQL:
+   ```sql
+   UPDATE users SET role = 'admin' WHERE email = 'your_user_email@example.com';
+   ```
+
+### Important Security Boundaries
+1. **Public Registration Policy**: Public user registration endpoints must **never** accept or parse a `role` attribute from client HTTP requests. All public signups must default strictly to `role = 'user'`.
+2. **Seed Admin Placeholder Hash**: The seeded admin account (`admin@example.com` in `seed.sql`) is configured with a dummy bcrypt placeholder hash. This seeded account **cannot** log in through the application until real cryptographic password hashes are generated by the backend or an upgraded real user account is utilized.
+3. **Authorization Enforcement**: The database only stores and validates the `role` value. The backend application must explicitly verify the user's role on every administrative endpoint and reject unauthorized requests.
+
+---
+
+## 7. Migration vs. Fresh Setup (schema.sql vs. migrations/)
+
+Understanding which script to execute is critical to preventing unintentional data loss:
+
+| Operational Scenario | Target Script | Execution Effect |
+| :--- | :--- | :--- |
+| **Fresh Database Setup** | `database/schema.sql` | **Wipes and recreates all tables.** Issues `DROP TABLE IF EXISTS` statements. Used for initial setup on local development machines or clean test databases. |
+| **Existing Database with Live Data** | `database/migrations/001_add_user_role.sql` | **Preserves existing data.** Executes an `ALTER TABLE users ADD COLUMN role ...` statement to apply schema enhancements without dropping tables or losing user records. |
+
+### Running the Migration Script on an Existing Database
+
+If you already have a populated database and need to upgrade it with the `role` column:
+
+- **Windows (PowerShell)**:
+  ```powershell
+  mysql -u root -p todo_db -e "source database/migrations/001_add_user_role.sql"
+  ```
+- **macOS / Linux**:
+  ```bash
+  mysql -u root -p todo_db < database/migrations/001_add_user_role.sql
+  ```
+
+---
+
+## 8. Quick Start (Run It Yourself)
 
 Execute all commands from the **repository root directory** (`to-do-application-grp18`).
 
@@ -215,14 +269,14 @@ DESCRIBE categories;
 DESCRIBE tasks;
 
 -- 3. Verify deterministic seed counts
-SELECT COUNT(*) AS user_count FROM users;          -- Expected output: 2
+SELECT COUNT(*) AS user_count FROM users;          -- Expected output: 3 (2 standard, 1 admin)
 SELECT COUNT(*) AS category_count FROM categories;  -- Expected output: 3
 SELECT COUNT(*) AS task_count FROM tasks;          -- Expected output: 9
 ```
 
 ---
 
-## 7. Connecting from the Backend
+## 9. Connecting from the Backend
 
 ### Connection String Format
 
@@ -256,25 +310,29 @@ Important rules:
 
 ---
 
-## 8. Sample Data
+## 10. Sample Data
 
 The `database/seed.sql` script loads deterministic development data:
-- **2 Users**:
-  - Alice Johnson (`alice@example.com`, ID: 1)
-  - Bob Smith (`bob@example.com`, ID: 2)
+- **3 Users**:
+  - Alice Johnson (`alice@example.com`, ID: 1, role: `'user'`)
+  - Bob Smith (`bob@example.com`, ID: 2, role: `'user'`)
+  - Admin (`admin@example.com`, ID: 3, role: `'admin'`)
   - Notice: All `password_hash` values in `seed.sql` are placeholder strings (`$2b$12$...placeholderhash...`). Seed users cannot authenticate through the backend authentication endpoints until real cryptographic hashes are generated by the backend.
 - **3 Categories**:
   - User 1 (Alice): "Work" (ID: 1), "Personal" (ID: 2)
   - User 2 (Bob): "Study" (ID: 3)
 - **9 Tasks**:
-  - Realistic task entries with mixed statuses (4 pending, 2 in_progress, 3 completed), mixed priorities (2 low, 3 medium, 4 high), varied deadlines (past due, near term, future, and NULL due dates), and uncategorized tasks (`category_id = NULL`).
+  - Realistic task entries with mixed statuses (4 pending, 2 in_progress, 3 completed), mixed priorities (2 low, 3 medium, 4 high), varied deadlines (past due, near term, future, and NULL due dates), and uncategorized tasks (`category_id = NULL`). The admin user has 0 tasks.
 - Re-runnable: `seed.sql` safely deletes existing table rows and resets auto-increment IDs back to 1 before inserting records.
 
 ---
 
-## 9. Common Queries
+## 11. Common Queries
 
-All application queries are documented in `database/queries.sql`. Every read, update, and delete operation is strictly scoped by `user_id` to guarantee tenant isolation:
+All application queries are documented in `database/queries.sql`. Queries are organized into two distinct operational categories:
+
+### Section 1: User-Scoped Queries (Filtered by user_id)
+These queries strictly enforce `user_id` filtering for data isolation. Sample UPDATE and DELETE statements are wrapped in `START TRANSACTION ... ROLLBACK` blocks so running the file never alters seed data:
 
 | Query | Purpose | Key SQL Characteristics |
 | :--- | :--- | :--- |
@@ -282,10 +340,21 @@ All application queries are documented in `database/queries.sql`. Every read, up
 | **Query 2** | Filter by status | Filters user tasks by status (`pending`, etc.) utilizing `idx_tasks_user_id_status`. |
 | **Query 3** | Search by title | Substring search using `LIKE CONCAT('%', @search_term, '%')` scoped by user. |
 | **Query 4** | Sort by priority and due date | Sorts by due date ascending (NULL dates last) and custom priority order (`high` > `medium` > `low`). |
-| **Query 5** | Update task status | Updates status enforcing `WHERE id = ? AND user_id = ?` to prevent cross-user writes. |
-| **Query 6** | Delete task | Deletes a task enforcing `WHERE id = ? AND user_id = ?` to prevent cross-user deletions. |
-| **Query 7** | Count tasks per status | Aggregates metric counts grouped by status for dashboard summary cards. |
-| **Query 8** | EXPLAIN execution plan | Analyzes index usage to confirm queries use `ref` access instead of table scans. |
+| **Query 5** | Update task status | Updates status enforcing `WHERE id = ? AND user_id = ?` (wrapped in rollback). |
+| **Query 6** | Delete task | Deletes a task enforcing `WHERE id = ? AND user_id = ?` (wrapped in rollback). |
+| **Query 7** | Count tasks per status | Aggregates metric counts grouped by status for user dashboard cards. |
+| **Query 8** | EXPLAIN execution plan | Analyzes index usage to confirm user queries use `ref` access instead of table scans. |
+
+### Section 2: ADMIN ONLY (Not Scoped to One User)
+These queries support global administration and intentionally do not filter by a single `user_id`:
+
+| Query | Purpose | Key SQL Characteristics |
+| :--- | :--- | :--- |
+| **Admin A** | All users with task counts | Lists all users with role, total tasks, and counts of pending, in_progress, and completed. |
+| **Admin B** | All tasks with owner details | Lists all tasks with owner name, email, status, priority, and due date, ordered by user and status. |
+| **Admin C** | Tasks in progress per user | Pinpoints tasks currently in progress across all users. |
+| **Admin D** | User progress and percentage | Computes total, completed, and completion percentage per user, guarded against division by zero. |
+| **Admin E** | Overall system progress | Aggregates overall system task totals, counts, and completion percentages. |
 
 ### Running the Queries Script
 
@@ -302,7 +371,7 @@ From the repository root:
 
 ---
 
-## 10. Testing and Verification
+## 12. Testing and Verification
 
 ### How to Run
 
@@ -319,13 +388,13 @@ Execute the automated test harness from the repository root:
 
 *Note: The test suite must be run as `root` because it compiles and executes a temporary stored procedure (`verify_schema_suite`) requiring routine creation privileges.*
 
-### Automated Test Matrix (17 Checks)
+### Automated Test Matrix (23 Checks)
 
 | Check # | Verification Target | Expected Behavior |
 | :---: | :--- | :--- |
 | **0** | MySQL Version Support | Verifies engine is >= 8.0.16 so CHECK constraints are actively enforced. |
 | **1** | Table Existence | Confirms `users`, `categories`, and `tasks` base tables exist in `todo_db`. |
-| **2** | Column & Type Specification | Validates all 16 column names, data types, lengths, and nullabilities. |
+| **2** | Column & Type Specification | Validates all 17 column names, data types, lengths, and nullabilities. |
 | **3** | Foreign Key Delete Rules | Confirms `CASCADE` on `user_id` and `SET NULL` on `category_id`. |
 | **4** | Index & Constraint Existence | Confirms unique constraints and all three performance indexes exist. |
 | **5** | Default Column Values | Confirms `status='pending'`, `priority='medium'`, and timestamp defaults apply. |
@@ -340,6 +409,12 @@ Execute the automated test harness from the repository root:
 | **14** | Category Nullification Deletion | Confirms deleting a category preserves tasks and resets `category_id` to NULL. |
 | **15** | User Query Data Isolation | Confirms user query returns only caller-owned rows with zero leakage. |
 | **16** | Query Index Utilization | Confirms task list query uses an index (`key` column is not NULL). |
+| **17** | Default Role Value | Confirms user `role` defaults to `'user'` on minimal insert. |
+| **18** | Invalid Role Rejection | Confirms invalid role values (e.g., `'superuser'`) violate CHECK constraint. |
+| **19** | NULL Role Rejection | Confirms inserting a NULL role raises a NOT NULL violation error. |
+| **20** | Admin Progress Row Count | Confirms admin user progress query returns exactly one row per registered user. |
+| **21** | Progress Status Sum Verification | Confirms pending + in_progress + completed task counts equal total tasks. |
+| **22** | Seed Data Admin Ownership | Confirms exactly 1 admin user with 0 owned tasks (WARN if custom data). |
 
 ### Interpreting Output
 
@@ -352,7 +427,7 @@ Expected Summary Output:
 +-------------+--------+--------+----------+
 | total_tests | passed | failed | warnings |
 +-------------+--------+--------+----------+
-|          17 |     17 |      0 |        0 |
+|          23 |     23 |      0 |        0 |
 +-------------+--------+--------+----------+
 ```
 
@@ -360,12 +435,12 @@ Expected Summary Output:
 
 - Zero Residual Data: The test procedure wraps all operations inside `START TRANSACTION;` and issues an explicit `ROLLBACK;` prior to completion. Persistent seed records are unaffected.
 - Safe for Repeated Runs: The test harness can be executed repeatedly in continuous integration (CI) or local environments without side effects.
-- When to Run: Run tests after any modification to `schema.sql` and before creating any pull request into `develop`.
+- When to Run: Run tests after any modification to `schema.sql` or migrations and before creating any pull request into `develop`.
 - What to Do if a Test Fails: Never modify a test to make it pass. Inspect the failing check number and details, adjust `database/schema.sql` to resolve the defect, re-run `schema.sql`, and re-test.
 
 ---
 
-## 11. Backup and Restore
+## 13. Backup and Restore
 
 ### Creating a Backup
 
@@ -400,7 +475,7 @@ Restore tables and data from the backup file:
 
 ---
 
-## 12. Resetting the Database
+## 14. Resetting the Database
 
 To completely wipe and rebuild the database back to a clean development state, re-execute the schema and seed scripts:
 
@@ -419,7 +494,7 @@ Warning: Re-running `schema.sql` issues `DROP TABLE IF EXISTS` statements. All c
 
 ---
 
-## 13. Troubleshooting
+## 15. Troubleshooting
 
 | Symptom | Root Cause | Solution |
 | :--- | :--- | :--- |
@@ -464,7 +539,7 @@ Never store plain text passwords in shell scripts or committed git files.
 
 ---
 
-## 14. Contract for Teammates
+## 16. Contract for Teammates
 
 The table and column definitions below represent the strict schema contract for the backend (Flask / SQLAlchemy) and frontend (React / TypeScript) teammates.
 
@@ -474,6 +549,7 @@ The table and column definitions below represent the strict schema contract for 
 | `users` | `name` | `VARCHAR(100)` | NO | None | None |
 | `users` | `email` | `VARCHAR(255)` | NO | UNIQUE | None |
 | `users` | `password_hash` | `VARCHAR(255)` | NO | None | None |
+| `users` | `role` | `VARCHAR(10)` | NO | CHECK IN ('user', 'admin') | `'user'` |
 | `categories` | `id` | `INT` | NO | PRIMARY KEY, AUTO_INCREMENT | None |
 | `categories` | `user_id` | `INT` | NO | FK -> `users.id`, ON DELETE CASCADE | None |
 | `categories` | `name` | `VARCHAR(100)` | NO | UNIQUE (`user_id`, `name`) | None |
@@ -491,23 +567,25 @@ Important: Any schema changes must be agreed upon with the team in advance. Once
 
 ---
 
-## 15. Security Notes
+## 17. Security Notes
 
 - Secret Protection: Never commit `.env` files, production credentials, or real passwords to version control.
 - Seed Hashes: All hashes in `database/seed.sql` are dummy mock strings. Seed accounts cannot be used to authenticate until valid password hashes are generated by backend endpoints.
+- Role Segregation: Public registration endpoints must never permit client-supplied roles. All signups default to `role = 'user'`. Administrative accounts (`role = 'admin'`) must only be provisioned by database administrators or secure administrative tools.
 - Principle of Least Privilege: The application user `todo_user` is restricted strictly to DML operations (`SELECT`, `INSERT`, `UPDATE`, `DELETE`) on `todo_db.*`. It cannot drop databases, alter schemas, or inspect other databases.
 - Administrative Segregation: The administrative `root` account must only be used for initial user provisioning, running test harnesses that compile temporary stored procedures, and creating database backup snapshots.
 
 ---
 
-## 16. Contributing and Change Checklist
+## 18. Contributing and Change Checklist
 
 When proposing any modification to the database schema, complete the following checklist:
 
 1. [ ] Update DDL: Implement changes in `database/schema.sql`.
-2. [ ] Update Seed Data: If columns or constraints changed, update `database/seed.sql` with matching test records.
-3. [ ] Update Queries: Check `database/queries.sql` to ensure all queries remain valid.
-4. [ ] Update Documentation: Update the Mermaid ER model in `database/er-diagram.md` and re-export `database/er-diagram.png`.
-5. [ ] Update Data Dictionary: Update the contract and data dictionary tables in `database/README.md`.
-6. [ ] Execute Verification Suite: Run `database/tests/verify_schema.sql` and confirm all 17 tests pass.
-7. [ ] Submit Pull Request: Commit the changes on the `db` branch and open a pull request targeting `develop`.
+2. [ ] Add Migration: For non-destructive upgrades on live databases, create a timestamped or numbered script in `database/migrations/`.
+3. [ ] Update Seed Data: If columns or constraints changed, update `database/seed.sql` with matching test records.
+4. [ ] Update Queries: Check `database/queries.sql` to ensure all queries remain valid.
+5. [ ] Update Documentation: Update the Mermaid ER model in `database/er-diagram.md` and re-export `database/er-diagram.png`.
+6. [ ] Update Data Dictionary: Update the contract and data dictionary tables in `database/README.md`.
+7. [ ] Execute Verification Suite: Run `database/tests/verify_schema.sql` and confirm all 23 tests pass.
+8. [ ] Submit Pull Request: Commit the changes on the `db` branch and open a pull request targeting `develop`.

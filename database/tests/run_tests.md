@@ -36,7 +36,7 @@ Get-Content database/tests/verify_schema.sql | mysql -u todo_user -p todo_db
 mysql -u root -p todo_db -e "source database/tests/verify_schema.sql"
 ```
 
-> **Note**: Enter the password when prompted.
+> **Note**: Enter the password when prompted. The test suite compiles a temporary stored procedure and therefore requires routine creation privileges (or `root` administrative access).
 
 ---
 
@@ -69,12 +69,12 @@ The test suite returns **two result sets**:
 ### Result Set 1: Individual Test Breakdown
 
 A table with 4 columns:
-- **`#`**: Test number (0 through 16).
+- **`#`**: Test number (0 through 22).
 - **`Test Name`**: Description of the constraint, relation, or behavior under test.
 - **`Status`**:
   - `PASS` (Green flag): The constraint or operation functioned exactly as designed.
   - `FAIL` (Red flag): A constraint was missing, violated, or returned unexpected values.
-  - `WARN` (Yellow advisory): Informational notice (e.g. MySQL version advisory).
+  - `WARN` (Yellow advisory): Informational notice (e.g. non-default seed data count).
 - **`Details`**: Diagnostic details, matched metadata, or error context.
 
 #### Example Output:
@@ -85,7 +85,7 @@ A table with 4 columns:
 +----+---------------------------------------------------------------+--------+-----------------------------------------------------------------+
 |  0 | MySQL Version >= 8.0.16                                       | PASS   | Version 8.0.44 enforces CHECK constraints                       |
 |  1 | All 3 tables exist (users, categories, tasks)                 | PASS   | Tables users, categories, tasks confirmed                       |
-|  2 | Table columns, data types, and nullability                    | PASS   | All 16 columns exactly match specification                      |
+|  2 | Table columns, data types, and nullability                    | PASS   | All 17 columns exactly match specification                      |
 |  3 | Foreign key delete rules (CASCADE and SET NULL)               | PASS   | CASCADE on user_id, SET NULL on category_id verified            |
 |  4 | Required indexes and unique constraints                       | PASS   | email UNIQUE, (user_id, name) UNIQUE, and 3 task indexes...     |
 |  5 | Default values on minimal task insert                         | PASS   | status=pending, priority=medium, created_at timestamp set       |
@@ -100,6 +100,12 @@ A table with 4 columns:
 | 14 | Category deletion sets category_id to NULL                    | PASS   | ON DELETE SET NULL preserved task and cleared category_id       |
 | 15 | User task list query returns isolated user data               | PASS   | Retrieved exactly 2 user-owned tasks with zero cross-tenant...  |
 | 16 | Task list query index usage (key is not NULL)                 | PASS   | Leading index column user_id confirmed on `idx_tasks_user_id`   |
+| 17 | Default role on minimal user insert                           | PASS   | role correctly defaulted to "user"                              |
+| 18 | Invalid role rejection (CHECK constraint)                     | PASS   | Invalid role "superuser" correctly rejected by CHECK constraint |
+| 19 | NULL role rejection (NOT NULL constraint)                     | PASS   | NULL role correctly rejected by NOT NULL constraint             |
+| 20 | Admin user progress query row count                           | PASS   | Query returned exactly 1 row per user (3 rows)                  |
+| 21 | Overall progress status counts sum to total tasks             | PASS   | pending(4) + in_prog(2) + comp(3) = total(9)                    |
+| 22 | Seed data admin user and task ownership check                 | PASS   | Exactly 1 admin user with 0 owned tasks confirmed               |
 +----+---------------------------------------------------------------+--------+-----------------------------------------------------------------+
 ```
 
@@ -111,7 +117,7 @@ Provides the aggregate score:
 +-------------+--------+--------+----------+
 | total_tests | passed | failed | warnings |
 +-------------+--------+--------+----------+
-|          17 |     17 |      0 |        0 |
+|          23 |     23 |      0 |        0 |
 +-------------+--------+--------+----------+
 ```
 
@@ -147,7 +153,7 @@ Notice:
 
 The test suite runs entirely inside a transaction:
 1. `START TRANSACTION;` begins the test execution.
-2. Temporary records (users, categories, tasks) are created to test validations, cascade rules, and nullability.
+2. Temporary records (users, categories, tasks) are created to test validations, cascade rules, role defaults, and nullability.
 3. `ROLLBACK;` is executed before exit.
 4. The temporary test procedure and memory table are dropped.
 

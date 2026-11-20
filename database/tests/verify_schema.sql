@@ -2,7 +2,7 @@
 -- Automated Schema & Constraint Verification Suite
 -- Target: MySQL 8.0.16+ | Database: todo_db
 --
--- Executes 16 automated schema validation tests + 1 MySQL version check.
+-- Executes 22 automated schema validation tests + 1 MySQL version check (23 total).
 -- Encapsulated in a stored procedure with scoped error handlers.
 -- Executed inside a transaction and rolled back to guarantee zero leftover test data.
 -- =============================================================================
@@ -76,7 +76,7 @@ BEGIN
     END;
 
     -- =========================================================================
-    -- Check 2: Table Columns, Types, and Nullability
+    -- Check 2: Table Columns, Types, and Nullability (17 Columns Total)
     -- =========================================================================
     BEGIN
         DECLARE total_cols INT DEFAULT 0;
@@ -95,6 +95,7 @@ BEGIN
               OR (table_name = 'users' AND column_name = 'name' AND data_type = 'varchar' AND character_maximum_length = 100 AND is_nullable = 'NO')
               OR (table_name = 'users' AND column_name = 'email' AND data_type = 'varchar' AND character_maximum_length = 255 AND is_nullable = 'NO')
               OR (table_name = 'users' AND column_name = 'password_hash' AND data_type = 'varchar' AND character_maximum_length = 255 AND is_nullable = 'NO')
+              OR (table_name = 'users' AND column_name = 'role' AND data_type = 'varchar' AND character_maximum_length = 10 AND is_nullable = 'NO' AND column_default = 'user')
               OR (table_name = 'categories' AND column_name = 'id' AND data_type = 'int' AND is_nullable = 'NO' AND extra LIKE '%auto_increment%')
               OR (table_name = 'categories' AND column_name = 'user_id' AND data_type = 'int' AND is_nullable = 'NO')
               OR (table_name = 'categories' AND column_name = 'name' AND data_type = 'varchar' AND character_maximum_length = 100 AND is_nullable = 'NO')
@@ -109,12 +110,12 @@ BEGIN
               OR (table_name = 'tasks' AND column_name = 'created_at' AND data_type = 'datetime' AND is_nullable = 'NO')
           );
 
-        IF total_cols = 16 AND valid_cols = 16 THEN
+        IF total_cols = 17 AND valid_cols = 17 THEN
             INSERT INTO test_results (test_num, test_name, status, details)
-            VALUES (2, 'Table columns, data types, and nullability', 'PASS', 'All 16 columns exactly match specification');
+            VALUES (2, 'Table columns, data types, and nullability', 'PASS', 'All 17 columns exactly match specification');
         ELSE
             INSERT INTO test_results (test_num, test_name, status, details)
-            VALUES (2, 'Table columns, data types, and nullability', 'FAIL', CONCAT('Matched ', valid_cols, ' of ', total_cols, ' expected 16'));
+            VALUES (2, 'Table columns, data types, and nullability', 'FAIL', CONCAT('Matched ', valid_cols, ' of ', total_cols, ' expected 17'));
         END IF;
     END;
 
@@ -559,6 +560,166 @@ BEGIN
         ELSE
             INSERT INTO test_results (test_num, test_name, status, details)
             VALUES (16, 'Task list query index usage (key is not NULL)', 'FAIL', 'No index found with user_id as leading key');
+        END IF;
+    END;
+
+    -- =========================================================================
+    -- Check 17: User Role Defaults to 'user' on Minimal Insert
+    -- =========================================================================
+    BEGIN
+        DECLARE v_uid INT;
+        DECLARE v_role VARCHAR(10);
+        DECLARE err_flag INT DEFAULT 0;
+        DECLARE CONTINUE HANDLER FOR SQLEXCEPTION SET err_flag = 1;
+
+        INSERT INTO users (name, email, password_hash)
+        VALUES ('Role Default User', 'test_role_default@example.com', 'dummy_hash');
+        SET v_uid = LAST_INSERT_ID();
+
+        SELECT role INTO v_role FROM users WHERE id = v_uid;
+
+        IF err_flag = 0 AND v_role = 'user' THEN
+            INSERT INTO test_results (test_num, test_name, status, details)
+            VALUES (17, 'Default role on minimal user insert', 'PASS', 'role correctly defaulted to "user"');
+        ELSE
+            INSERT INTO test_results (test_num, test_name, status, details)
+            VALUES (17, 'Default role on minimal user insert', 'FAIL', CONCAT('role=', IFNULL(v_role, 'NULL')));
+        END IF;
+    END;
+
+    -- =========================================================================
+    -- Check 18: Invalid User Role Rejection (CHECK constraint)
+    -- =========================================================================
+    BEGIN
+        DECLARE err_flag INT DEFAULT 0;
+        DECLARE CONTINUE HANDLER FOR SQLEXCEPTION SET err_flag = 1;
+
+        INSERT INTO users (name, email, password_hash, role)
+        VALUES ('Invalid Role User', 'test_invalid_role@example.com', 'dummy_hash', 'superuser');
+
+        IF err_flag = 1 THEN
+            INSERT INTO test_results (test_num, test_name, status, details)
+            VALUES (18, 'Invalid role rejection (CHECK constraint)', 'PASS', 'Invalid role "superuser" correctly rejected by CHECK constraint');
+        ELSE
+            INSERT INTO test_results (test_num, test_name, status, details)
+            VALUES (18, 'Invalid role rejection (CHECK constraint)', 'FAIL', 'Invalid role "superuser" was incorrectly permitted');
+        END IF;
+    END;
+
+    -- =========================================================================
+    -- Check 19: NULL Role Rejection (NOT NULL constraint)
+    -- =========================================================================
+    BEGIN
+        DECLARE err_flag INT DEFAULT 0;
+        DECLARE CONTINUE HANDLER FOR SQLEXCEPTION SET err_flag = 1;
+
+        INSERT INTO users (name, email, password_hash, role)
+        VALUES ('Null Role User', 'test_null_role@example.com', 'dummy_hash', NULL);
+
+        IF err_flag = 1 THEN
+            INSERT INTO test_results (test_num, test_name, status, details)
+            VALUES (19, 'NULL role rejection (NOT NULL constraint)', 'PASS', 'NULL role correctly rejected by NOT NULL constraint');
+        ELSE
+            INSERT INTO test_results (test_num, test_name, status, details)
+            VALUES (19, 'NULL role rejection (NOT NULL constraint)', 'FAIL', 'NULL role was incorrectly permitted');
+        END IF;
+    END;
+
+    -- =========================================================================
+    -- Check 20: Admin Progress Query Returns One Row Per User
+    -- =========================================================================
+    BEGIN
+        DECLARE total_users_count INT DEFAULT 0;
+        DECLARE admin_rows_count INT DEFAULT 0;
+        DECLARE err_flag INT DEFAULT 0;
+        DECLARE CONTINUE HANDLER FOR SQLEXCEPTION SET err_flag = 1;
+
+        SELECT COUNT(*) INTO total_users_count FROM users;
+
+        SELECT COUNT(*) INTO admin_rows_count
+        FROM (
+            SELECT 
+                u.id AS user_id,
+                u.name,
+                u.email,
+                u.role,
+                COUNT(t.id) AS total_tasks,
+                COUNT(CASE WHEN t.status = 'completed' THEN 1 END) AS completed_tasks,
+                ROUND(
+                    CASE 
+                        WHEN COUNT(t.id) = 0 THEN 0.00
+                        ELSE (COUNT(CASE WHEN t.status = 'completed' THEN 1 END) / COUNT(t.id)) * 100.00
+                    END, 
+                    2
+                ) AS completion_percentage
+            FROM users u
+            LEFT JOIN tasks t ON u.id = t.user_id
+            GROUP BY u.id, u.name, u.email, u.role
+        ) progress_subquery;
+
+        IF err_flag = 0 AND admin_rows_count = total_users_count AND total_users_count > 0 THEN
+            INSERT INTO test_results (test_num, test_name, status, details)
+            VALUES (20, 'Admin user progress query row count', 'PASS', CONCAT('Query returned exactly 1 row per user (', admin_rows_count, ' rows)'));
+        ELSE
+            INSERT INTO test_results (test_num, test_name, status, details)
+            VALUES (20, 'Admin user progress query row count', 'FAIL', CONCAT('Users=', total_users_count, ', Query rows=', admin_rows_count));
+        END IF;
+    END;
+
+    -- =========================================================================
+    -- Check 21: Overall Progress Status Counts Sum to Total Tasks
+    -- =========================================================================
+    BEGIN
+        DECLARE v_total INT DEFAULT 0;
+        DECLARE v_pending INT DEFAULT 0;
+        DECLARE v_in_progress INT DEFAULT 0;
+        DECLARE v_completed INT DEFAULT 0;
+        DECLARE err_flag INT DEFAULT 0;
+        DECLARE CONTINUE HANDLER FOR SQLEXCEPTION SET err_flag = 1;
+
+        SELECT 
+            COUNT(*),
+            COUNT(CASE WHEN status = 'pending' THEN 1 END),
+            COUNT(CASE WHEN status = 'in_progress' THEN 1 END),
+            COUNT(CASE WHEN status = 'completed' THEN 1 END)
+        INTO v_total, v_pending, v_in_progress, v_completed
+        FROM tasks;
+
+        IF err_flag = 0 AND (v_pending + v_in_progress + v_completed = v_total) THEN
+            INSERT INTO test_results (test_num, test_name, status, details)
+            VALUES (21, 'Overall progress status counts sum to total tasks', 'PASS', CONCAT('pending(', v_pending, ') + in_prog(', v_in_progress, ') + comp(', v_completed, ') = total(', v_total, ')'));
+        ELSE
+            INSERT INTO test_results (test_num, test_name, status, details)
+            VALUES (21, 'Overall progress status counts sum to total tasks', 'FAIL', CONCAT('Sum=', (v_pending + v_in_progress + v_completed), ' vs Total=', v_total));
+        END IF;
+    END;
+
+    -- =========================================================================
+    -- Check 22: Seed Data Admin Verification (Advisory / Non-Blocking)
+    -- Verifies default seed state: exactly 1 admin user with 0 owned tasks.
+    -- Emits WARN (not FAIL) if database holds custom or production data.
+    -- =========================================================================
+    BEGIN
+        DECLARE admin_count INT DEFAULT 0;
+        DECLARE admin_task_count INT DEFAULT 0;
+        DECLARE err_flag INT DEFAULT 0;
+        DECLARE CONTINUE HANDLER FOR SQLEXCEPTION SET err_flag = 1;
+
+        SELECT COUNT(*) INTO admin_count
+        FROM users
+        WHERE role = 'admin';
+
+        SELECT COUNT(t.id) INTO admin_task_count
+        FROM users u
+        JOIN tasks t ON u.id = t.user_id
+        WHERE u.role = 'admin';
+
+        IF err_flag = 0 AND admin_count = 1 AND admin_task_count = 0 THEN
+            INSERT INTO test_results (test_num, test_name, status, details)
+            VALUES (22, 'Seed data admin user and task ownership check', 'PASS', 'Exactly 1 admin user with 0 owned tasks confirmed');
+        ELSE
+            INSERT INTO test_results (test_num, test_name, status, details)
+            VALUES (22, 'Seed data admin user and task ownership check', 'WARN', CONCAT('Advisory: Found ', admin_count, ' admin(s) with ', admin_task_count, ' task(s) (non-default seed state)'));
         END IF;
     END;
 

@@ -17,6 +17,7 @@ erDiagram
         varchar_100 name "NOT NULL"
         varchar_255 email "NOT NULL, UNIQUE"
         varchar_255 password_hash "NOT NULL"
+        varchar_10 role "NOT NULL, DEFAULT 'user'"
     }
 
     categories {
@@ -57,6 +58,7 @@ erDiagram
 - `categories(user_id, name)` (UNIQUE): Prevents duplicate category names for the same user while allowing different users to use identical names (e.g. both Alice and Bob can have a "Work" category).
 
 ### Check Constraints (MySQL 8.0.16+)
+- `chk_users_role`: `role IN ('user', 'admin')`
 - `chk_tasks_status`: `status IN ('pending', 'in_progress', 'completed')`
 - `chk_tasks_priority`: `priority IN ('low', 'medium', 'high')`
 
@@ -69,7 +71,7 @@ erDiagram
 
 ## 4. How to Export to `er-diagram.png`
 
-You can export this Mermaid diagram to `er-diagram.png` using any of the following methods:
+Whenever the schema or entity attributes are modified, re-export this diagram to `database/er-diagram.png` using any of the following methods:
 
 ### Method A: Using Mermaid CLI (`mmdc`)
 ```powershell

@@ -1,7 +1,7 @@
 -- =============================================================================
 -- Seed Data: To-Do Application (todo_db)
 -- Provides mock data for local development and functional testing:
--- - 2 Users (with placeholder password hashes, no real credentials)
+-- - 3 Users: 2 standard users (Alice, Bob) and 1 admin user
 -- - 3 Categories
 -- - 9 Tasks (mixed status, priority, due dates, and category associations)
 -- =============================================================================
@@ -18,12 +18,13 @@ ALTER TABLE categories AUTO_INCREMENT = 1;
 ALTER TABLE tasks AUTO_INCREMENT = 1;
 
 -- =============================================================================
--- 1. SEED USERS (2 Users)
+-- 1. SEED USERS (3 Users: 2 Standard Users, 1 Admin User)
 -- Note: password_hash values are dummy bcrypt-formatted strings for mock purposes.
 -- =============================================================================
-INSERT INTO users (id, name, email, password_hash) VALUES
-(1, 'Alice Johnson', 'alice@example.com', '$2b$12$e80yq9gq0QZ3r5eX1b6h8Oplaceholderhashforuser1alice'),
-(2, 'Bob Smith', 'bob@example.com', '$2b$12$k91zr0hr1RA4s6fY2c7i9Pplaceholderhashforuser2bob');
+INSERT INTO users (id, name, email, password_hash, role) VALUES
+(1, 'Alice Johnson', 'alice@example.com', '$2b$12$e80yq9gq0QZ3r5eX1b6h8Oplaceholderhashforuser1alice', 'user'),
+(2, 'Bob Smith', 'bob@example.com', '$2b$12$k91zr0hr1RA4s6fY2c7i9Pplaceholderhashforuser2bob', 'user'),
+(3, 'Admin', 'admin@example.com', '$2b$12$m02as1is2SB5t7gZ3d8j0Qplaceholderhashforadminuser', 'admin');
 
 -- =============================================================================
 -- 2. SEED CATEGORIES (3 Categories)

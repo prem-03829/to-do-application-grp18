@@ -18,13 +18,15 @@ DROP TABLE IF EXISTS users;
 
 -- =============================================================================
 -- Table: users
--- Stores registered user accounts with credentials.
+-- Stores registered user and admin accounts with credentials and roles.
 -- =============================================================================
 CREATE TABLE users (
     id INT AUTO_INCREMENT PRIMARY KEY,
     name VARCHAR(100) NOT NULL,
     email VARCHAR(255) NOT NULL UNIQUE,
-    password_hash VARCHAR(255) NOT NULL
+    password_hash VARCHAR(255) NOT NULL,
+    role VARCHAR(10) NOT NULL DEFAULT 'user',
+    CONSTRAINT chk_users_role CHECK (role IN ('user', 'admin'))
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- =============================================================================
