@@ -2,6 +2,19 @@
 
 API for the to-do app: user login, task CRUD, and an admin role.
 
+## Project Structure
+```text
+Backend/
+├── main.py          # App entry point only
+└── app/
+    ├── __init__.py  # App factory, CORS, JWT, and Blueprint registration
+    ├── database.py  # MySQL database connection and setup
+    ├── models/      # Database models (User, Category, Task)
+    ├── schemas/     # Request/response validation & serialization
+    ├── services/    # Business logic separated from routes
+    └── routes/      # Flask Blueprints (auth.py, tasks.py, admin.py, dashboard.py)
+```
+
 ## Run it
 1. `cd Backend`
 2. `python -m venv venv`, then activate it (Windows PowerShell: `venv\Scripts\activate`)

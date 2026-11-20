@@ -1,6 +1,8 @@
 """Run: python test_api.py  (uses a temporary in-memory database)"""
 import os
 os.environ.setdefault("DATABASE_URL", "sqlite:///:memory:")
+os.environ.setdefault("ADMIN_EMAIL", "admin@college.edu")
+os.environ.setdefault("ADMIN_PASSWORD", "Admin@123")
 from main import app
 
 c = app.test_client()
