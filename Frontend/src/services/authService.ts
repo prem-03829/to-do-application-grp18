@@ -1,5 +1,5 @@
 import { apiClient } from '../lib/api';
-import { AuthResponse, User } from '../types';
+import { AuthResponse, User, UserRole } from '../types';
 import { mockAuthService } from './mock/mockAuth';
 
 const USE_MOCK = import.meta.env.VITE_USE_MOCK_API !== 'false';
@@ -7,12 +7,15 @@ const USE_MOCK = import.meta.env.VITE_USE_MOCK_API !== 'false';
 export interface LoginPayload {
   email: string;
   password: string;
+  role?: UserRole;
 }
 
 export interface RegisterPayload {
   name: string;
   email: string;
   password: string;
+  role?: UserRole;
+  adminAccessCode?: string;
 }
 
 export const authService = {
@@ -45,6 +48,18 @@ export const authService = {
       return response.data;
     } catch {
       return null;
+    }
+  },
+
+  async getAllUsers(): Promise<User[]> {
+    if (USE_MOCK) {
+      return mockAuthService.getAllUsers();
+    }
+    try {
+      const response = await apiClient.get<User[]>('/users');
+      return response.data;
+    } catch {
+      return [];
     }
   },
 

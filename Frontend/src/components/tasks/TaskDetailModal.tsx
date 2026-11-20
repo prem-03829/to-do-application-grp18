@@ -95,6 +95,14 @@ export const TaskDetailModal: React.FC<TaskDetailModalProps> = ({
                 {task.category}
               </span>
             )}
+            {task.assignedToName && (
+              <span className="flex items-center gap-1.5 text-xs font-medium text-indigo-700 bg-indigo-50 px-2.5 py-1 rounded-full border border-indigo-200/60">
+                {task.assignedToAvatar && (
+                  <img src={task.assignedToAvatar} alt="" className="w-3.5 h-3.5 rounded-full object-cover" />
+                )}
+                <span>Assigned to: {task.assignedToName}</span>
+              </span>
+            )}
           </div>
         </div>
 

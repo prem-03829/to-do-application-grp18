@@ -1,11 +1,14 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { taskService } from '../services/taskService';
+import { authService } from '../services/authService';
 import {
   Task,
   CreateTaskInput,
   UpdateTaskInput,
   TaskFiltersState,
   DashboardStats,
+  UserProgress,
+  User,
 } from '../types';
 
 export const TASK_KEYS = {
@@ -15,6 +18,8 @@ export const TASK_KEYS = {
   details: () => [...TASK_KEYS.all, 'detail'] as const,
   detail: (id: string) => [...TASK_KEYS.details(), id] as const,
   stats: () => ['dashboard-stats'] as const,
+  teamProgress: () => ['team-progress'] as const,
+  users: () => ['users'] as const,
 };
 
 export function useTasks(filters?: Partial<TaskFiltersState>) {
@@ -33,11 +38,27 @@ export function useTask(id?: string) {
   });
 }
 
-export function useDashboardStats() {
+export function useDashboardStats(userId?: string) {
   return useQuery<DashboardStats, Error>({
-    queryKey: TASK_KEYS.stats(),
-    queryFn: () => taskService.getDashboardStats(),
+    queryKey: [...TASK_KEYS.stats(), userId],
+    queryFn: () => taskService.getDashboardStats(userId),
     staleTime: 1000 * 20,
+  });
+}
+
+export function useTeamProgress() {
+  return useQuery<UserProgress[], Error>({
+    queryKey: TASK_KEYS.teamProgress(),
+    queryFn: () => taskService.getTeamProgress(),
+    staleTime: 1000 * 15,
+  });
+}
+
+export function useUsers() {
+  return useQuery<User[], Error>({
+    queryKey: TASK_KEYS.users(),
+    queryFn: () => authService.getAllUsers(),
+    staleTime: 1000 * 60,
   });
 }
 
@@ -49,6 +70,7 @@ export function useCreateTask() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: TASK_KEYS.all });
       queryClient.invalidateQueries({ queryKey: TASK_KEYS.stats() });
+      queryClient.invalidateQueries({ queryKey: TASK_KEYS.teamProgress() });
     },
   });
 }
@@ -63,6 +85,7 @@ export function useUpdateTask() {
       queryClient.invalidateQueries({ queryKey: TASK_KEYS.all });
       queryClient.invalidateQueries({ queryKey: TASK_KEYS.detail(variables.id) });
       queryClient.invalidateQueries({ queryKey: TASK_KEYS.stats() });
+      queryClient.invalidateQueries({ queryKey: TASK_KEYS.teamProgress() });
     },
   });
 }
@@ -75,6 +98,7 @@ export function useDeleteTask() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: TASK_KEYS.all });
       queryClient.invalidateQueries({ queryKey: TASK_KEYS.stats() });
+      queryClient.invalidateQueries({ queryKey: TASK_KEYS.teamProgress() });
     },
   });
 }
@@ -87,6 +111,7 @@ export function useToggleTaskStatus() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: TASK_KEYS.all });
       queryClient.invalidateQueries({ queryKey: TASK_KEYS.stats() });
+      queryClient.invalidateQueries({ queryKey: TASK_KEYS.teamProgress() });
     },
   });
 }

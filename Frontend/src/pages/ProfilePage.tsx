@@ -64,7 +64,7 @@ export const ProfilePage: React.FC = () => {
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const [name, setName] = useState(user?.name || '');
-  const [role, setRole] = useState(user?.role || 'Frontend Engineering Intern');
+  const [department, setDepartment] = useState(user?.department || 'Frontend Engineering Intern');
   const [selectedAvatar, setSelectedAvatar] = useState(user?.avatar || ANIMATED_AVATAR_PRESETS[0].url);
   const [isSaving, setIsSaving] = useState(false);
   const [isCustomUploaded, setIsCustomUploaded] = useState(
@@ -120,7 +120,7 @@ export const ProfilePage: React.FC = () => {
     setTimeout(() => {
       updateUser({
         name: name.trim(),
-        role: role.trim(),
+        department: department.trim(),
         avatar: selectedAvatar,
       });
       setIsSaving(false);
@@ -198,10 +198,10 @@ export const ProfilePage: React.FC = () => {
             <p className="text-xs text-slate-500 mt-0.5">{user?.email}</p>
 
             <div className="flex flex-wrap items-center justify-center gap-1.5 mt-3">
-              <Badge variant="primary" size="sm">
-                {user?.role || 'Intern'}
+              <Badge variant={user?.role === 'admin' ? 'purple' : 'primary'} size="sm">
+                {user?.role === 'admin' ? 'Admin Lead' : 'Normal User'}
               </Badge>
-              <Badge variant="purple" size="sm">
+              <Badge variant="slate" size="sm">
                 Group 18
               </Badge>
             </div>
@@ -344,9 +344,9 @@ export const ProfilePage: React.FC = () => {
                     leftIcon={<UserIcon className="w-4 h-4" />}
                   />
                   <Input
-                    label="Role / Title"
-                    value={role}
-                    onChange={(e) => setRole(e.target.value)}
+                    label="Department / Role Title"
+                    value={department}
+                    onChange={(e) => setDepartment(e.target.value)}
                     placeholder="e.g. Frontend Engineering Intern"
                     leftIcon={<Briefcase className="w-4 h-4" />}
                   />

@@ -89,13 +89,24 @@ npm run preview
 
 ---
 
-## 🔐 Demo Credentials (Mock Mode)
+## 🔐 Demo Credentials & Roles (Mock Mode)
 
-When opening the login screen, a **"Fill Demo"** button is provided to prefill test credentials:
+The login and register pages support two roles:
+
+### 1. Normal User (Member)
 - **Email:** `rushikesh.jagtap@college.edu`
 - **Password:** `password123`
+- **Features:** Personal dashboard, My Tasks, Today, Upcoming, Completed, and profile avatar customization.
 
-You can also register any new account on the registration page; data persists across page refreshes in `localStorage`.
+### 2. Admin / Team Lead
+- **Email:** `admin@taskflow.dev`
+- **Password:** `password123`
+- **Features:** Access to **Admin Hub (`/admin`)** displaying all registered active members, current tasks in progress (`in_progress`), overall user progress percentages, and task assignment.
+
+### 3. Registering a New Admin Account
+- When registering with the **Admin Lead** role, the form requires an **Admin Authorization Access Code**.
+- **Demo Access Code:** `ADMIN2025` (or `TASKFLOW-ADMIN-2025`)
+- A 1-click **"Use Demo Code"** helper is provided directly in the UI for convenience during internship demonstration.
 
 ---
 

@@ -57,6 +57,14 @@ export const TaskItem: React.FC<TaskItemProps> = ({
                 {task.category}
               </span>
             )}
+            {task.assignedToName && (
+              <span className="inline-flex items-center gap-1 text-[11px] font-medium text-indigo-700 bg-indigo-50/80 px-2 py-0.5 rounded-md border border-indigo-200/50 shrink-0">
+                {task.assignedToAvatar && (
+                  <img src={task.assignedToAvatar} alt="" className="w-3.5 h-3.5 rounded-full object-cover" />
+                )}
+                <span>{task.assignedToName}</span>
+              </span>
+            )}
           </div>
           {task.description && (
             <p className="text-xs text-slate-500 line-clamp-1 mt-0.5">{task.description}</p>

@@ -1,5 +1,6 @@
 export type TaskStatus = 'pending' | 'in_progress' | 'completed';
 export type TaskPriority = 'low' | 'medium' | 'high';
+export type UserRole = 'user' | 'admin';
 
 export interface Task {
   id: string;
@@ -11,9 +12,11 @@ export interface Task {
   createdAt: string; // ISO string
   category?: string;
   userId?: string;
+  assignedToName?: string;
+  assignedToAvatar?: string;
 }
 
-export type CreateTaskInput = Omit<Task, 'id' | 'createdAt' | 'userId'>;
+export type CreateTaskInput = Omit<Task, 'id' | 'createdAt'>;
 export type UpdateTaskInput = Partial<CreateTaskInput>;
 
 export interface TaskFiltersState {
@@ -23,6 +26,7 @@ export interface TaskFiltersState {
   category: string | 'all';
   sortBy: 'dueDate' | 'createdAt' | 'priority' | 'title';
   sortOrder: 'asc' | 'desc';
+  userId?: string | 'all';
 }
 
 export interface User {
@@ -30,7 +34,9 @@ export interface User {
   name: string;
   email: string;
   avatar?: string;
-  role?: string;
+  role: UserRole;
+  department?: string;
+  joinedAt?: string;
 }
 
 export interface AuthResponse {
@@ -46,4 +52,15 @@ export interface DashboardStats {
   completionRate: number;
   dueToday: number;
   upcomingCount: number;
+}
+
+export interface UserProgress {
+  user: User;
+  totalTasks: number;
+  inProgressTasks: Task[];
+  otherTasks: Task[];
+  completedCount: number;
+  pendingCount: number;
+  inProgressCount: number;
+  completionRate: number;
 }

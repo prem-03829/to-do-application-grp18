@@ -5,6 +5,7 @@ import {
   UpdateTaskInput,
   TaskFiltersState,
   DashboardStats,
+  UserProgress,
 } from '../types';
 import { mockTaskService } from './mock/mockTasks';
 import { isDueToday, isUpcoming } from '../lib/utils';
@@ -18,6 +19,7 @@ export const taskService = {
     }
     const params: Record<string, string | undefined> = {};
     if (filters?.search) params.q = filters.search;
+    if (filters?.userId && filters.userId !== 'all') params.user_id = filters.userId;
     if (filters?.status && filters.status !== 'all') params.status = filters.status;
     if (filters?.priority && filters.priority !== 'all') params.priority = filters.priority;
     if (filters?.category && filters.category !== 'all') params.category = filters.category;
@@ -62,21 +64,22 @@ export const taskService = {
     if (USE_MOCK) {
       return mockTaskService.toggleTaskStatus(id);
     }
-    // Real API: get current or call dedicated toggle endpoint / patch
     const response = await apiClient.patch<Task>(`/tasks/${id}/toggle`);
     return response.data;
   },
 
-  async getDashboardStats(): Promise<DashboardStats> {
+  async getDashboardStats(userId?: string): Promise<DashboardStats> {
     if (USE_MOCK) {
-      return mockTaskService.getDashboardStats();
+      return mockTaskService.getDashboardStats(userId);
     }
     try {
-      const response = await apiClient.get<DashboardStats>('/dashboard/stats');
+      const response = await apiClient.get<DashboardStats>('/dashboard/stats', {
+        params: userId ? { user_id: userId } : {},
+      });
       return response.data;
     } catch {
       // Fallback: calculate from all tasks if endpoint not implemented
-      const tasks = await this.getTasks();
+      const tasks = await this.getTasks(userId ? { userId } : undefined);
       const total = tasks.length;
       const pending = tasks.filter((t) => t.status === 'pending').length;
       const inProgress = tasks.filter((t) => t.status === 'in_progress').length;
@@ -94,6 +97,19 @@ export const taskService = {
         dueToday,
         upcomingCount,
       };
+    }
+  },
+
+  // Admin: retrieve progress, active working tasks, and all tasks for each user
+  async getTeamProgress(): Promise<UserProgress[]> {
+    if (USE_MOCK) {
+      return mockTaskService.getTeamProgress();
+    }
+    try {
+      const response = await apiClient.get<UserProgress[]>('/admin/team-progress');
+      return response.data;
+    } catch {
+      return mockTaskService.getTeamProgress();
     }
   },
 };
