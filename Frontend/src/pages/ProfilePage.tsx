@@ -1,7 +1,6 @@
 import React, { useState, useRef } from 'react';
 import { useAuth } from '../context/AuthContext';
-import { useDashboardStats, useTasks } from '../hooks/useTasks';
-import { mockTaskService } from '../services/mock/mockTasks';
+import { useDashboardStats } from '../hooks/useTasks';
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '../components/ui/Card';
 import { Button } from '../components/ui/Button';
 import { Input } from '../components/ui/Input';
@@ -13,7 +12,6 @@ import {
   Briefcase,
   Server,
   Database,
-  RotateCcw,
   Save,
   Upload,
   Camera,
@@ -59,7 +57,6 @@ const ANIMATED_AVATAR_PRESETS = [
 export const ProfilePage: React.FC = () => {
   const { user, updateUser } = useAuth();
   const { data: stats } = useDashboardStats();
-  const { refetch: refetchTasks } = useTasks();
 
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -126,12 +123,6 @@ export const ProfilePage: React.FC = () => {
       setIsSaving(false);
       toast.success('Profile & Avatar updated successfully!');
     }, 200);
-  };
-
-  const handleResetDemoData = () => {
-    mockTaskService.resetDemoData();
-    refetchTasks();
-    toast.success('Demo tasks reset to original internship seed data!');
   };
 
   return (
@@ -409,24 +400,6 @@ export const ProfilePage: React.FC = () => {
                   </p>
                   <p className="text-slate-500 text-[11px] font-mono">{apiBaseUrl}</p>
                 </div>
-              </div>
-
-              {/* Reset demo data button */}
-              <div className="pt-2 flex items-center justify-between border-t border-slate-100 text-xs">
-                <div>
-                  <p className="font-semibold text-slate-800">Reset Sample Task Dataset</p>
-                  <p className="text-slate-400 text-[11px]">
-                    Restore original sample assignments & tasks for live internship presentation
-                  </p>
-                </div>
-                <Button
-                  variant="secondary"
-                  size="sm"
-                  onClick={handleResetDemoData}
-                  leftIcon={<RotateCcw className="w-3.5 h-3.5" />}
-                >
-                  Reset Demo Data
-                </Button>
               </div>
             </CardContent>
           </Card>

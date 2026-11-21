@@ -8,7 +8,7 @@ import { UserRole } from '../types';
 import { Input } from '../components/ui/Input';
 import { Button } from '../components/ui/Button';
 import { Checkbox } from '../components/ui/Checkbox';
-import { Layers, Eye, EyeOff, Sparkles, User, ShieldCheck } from 'lucide-react';
+import { Layers, Eye, EyeOff, User, ShieldCheck } from 'lucide-react';
 import { toast } from 'sonner';
 
 const loginSchema = z.object({
@@ -37,8 +37,8 @@ export const LoginPage: React.FC = () => {
   } = useForm<LoginFormData>({
     resolver: zodResolver(loginSchema),
     defaultValues: {
-      email: 'rushikesh.jagtap@college.edu',
-      password: 'password123',
+      email: '',
+      password: '',
       role: 'user',
     },
   });
@@ -46,13 +46,6 @@ export const LoginPage: React.FC = () => {
   const handleSelectRole = (role: UserRole) => {
     setSelectedRole(role);
     setValue('role', role);
-    if (role === 'admin') {
-      setValue('email', 'admin@taskflow.dev');
-      setValue('password', 'password123');
-    } else {
-      setValue('email', 'rushikesh.jagtap@college.edu');
-      setValue('password', 'password123');
-    }
   };
 
   const onSubmit = async (data: LoginFormData) => {
@@ -132,39 +125,6 @@ export const LoginPage: React.FC = () => {
                 ? '⚡ Admin view allows monitoring active team members, tasks in-progress, and overall progress.'
                 : '💼 Normal user view manages personal tasks, deadlines, and daily focus.'}
             </p>
-          </div>
-
-          {/* Quick Demo Pre-fill Pill */}
-          <div className="p-3 bg-indigo-50/70 border border-indigo-100 rounded-xl flex items-center justify-between">
-            <div className="flex items-center gap-2">
-              <Sparkles className="w-4 h-4 text-indigo-600 shrink-0" />
-              <div className="text-[11px] text-slate-600">
-                <span className="font-semibold text-indigo-900 block">
-                  {selectedRole === 'admin' ? 'Admin Demo Loaded' : 'User Demo Loaded'}
-                </span>
-                <span>Pre-filled with test credentials</span>
-              </div>
-            </div>
-            <div className="flex items-center gap-1.5">
-              <button
-                type="button"
-                onClick={() => handleSelectRole('user')}
-                className={`text-[11px] font-semibold px-2 py-1 rounded-md border shadow-2xs cursor-pointer ${
-                  selectedRole === 'user' ? 'bg-indigo-600 text-white border-indigo-600' : 'bg-white text-slate-600 border-slate-200'
-                }`}
-              >
-                User
-              </button>
-              <button
-                type="button"
-                onClick={() => handleSelectRole('admin')}
-                className={`text-[11px] font-semibold px-2 py-1 rounded-md border shadow-2xs cursor-pointer ${
-                  selectedRole === 'admin' ? 'bg-indigo-600 text-white border-indigo-600' : 'bg-white text-slate-600 border-slate-200'
-                }`}
-              >
-                Admin
-              </button>
-            </div>
           </div>
 
           {serverError && (

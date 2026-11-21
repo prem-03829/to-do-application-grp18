@@ -11,7 +11,6 @@ import {
   ChevronLeft,
   ChevronRight,
   Layers,
-  Sparkles,
   X,
   ShieldCheck,
 } from 'lucide-react';
@@ -199,23 +198,6 @@ export const Sidebar: React.FC<SidebarProps> = ({
             )}
           </NavLink>
         ))}
-
-        {!isCollapsed && (
-          <div className="pt-6">
-            <p className="px-3 text-[11px] font-semibold text-slate-400 uppercase tracking-wider mb-2">
-              Internship Workspace
-            </p>
-            <div className="mx-2 p-3 bg-gradient-to-br from-indigo-50/50 to-slate-50 rounded-xl border border-indigo-100/60">
-              <div className="flex items-center gap-2 text-indigo-700 font-semibold text-xs mb-1">
-                <Sparkles className="w-3.5 h-3.5" />
-                <span>Group 18 Project</span>
-              </div>
-              <p className="text-[11px] text-slate-500 leading-relaxed">
-                Frontend ready for Flask + MySQL integration. Mock API currently active.
-              </p>
-            </div>
-          </div>
-        )}
       </div>
 
       {/* User Profile & Logout Section */}

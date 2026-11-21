@@ -10,9 +10,17 @@ import { INITIAL_TASKS } from './mockData';
 import { mockAuthService } from './mockAuth';
 import { isDueToday, isUpcoming } from '../../lib/utils';
 
-const STORAGE_TASKS_KEY = 'taskflow_mock_tasks_v2';
+const STORAGE_TASKS_KEY = 'taskflow_tasks_v3';
 
 function getStoredTasks(): Task[] {
+  // Clear any legacy demo seeds from previous sessions
+  try {
+    localStorage.removeItem('taskflow_mock_tasks_v2');
+    localStorage.removeItem('taskflow_mock_tasks');
+  } catch {
+    // ignore
+  }
+
   const data = localStorage.getItem(STORAGE_TASKS_KEY);
   if (!data) {
     localStorage.setItem(STORAGE_TASKS_KEY, JSON.stringify(INITIAL_TASKS));

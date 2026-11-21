@@ -1,15 +1,22 @@
 import { User, AuthResponse, UserRole } from '../../types';
 import { INITIAL_USERS } from './mockData';
 
-const STORAGE_USERS_KEY = 'taskflow_mock_registered_users_v2';
+const STORAGE_USERS_KEY = 'taskflow_users_v3';
 const STORAGE_CURRENT_USER_KEY = 'taskflow_user';
 const STORAGE_TOKEN_KEY = 'taskflow_token';
 
 // Helper to get registered users
 function getRegisteredUsers(): Array<{ email: string; passwordHash: string; user: User }> {
+  // Clear any legacy mock user seeds
+  try {
+    localStorage.removeItem('taskflow_mock_registered_users_v2');
+    localStorage.removeItem('taskflow_mock_registered_users');
+  } catch {
+    // ignore
+  }
+
   const data = localStorage.getItem(STORAGE_USERS_KEY);
   if (!data) {
-    // Seed with initial team members
     const defaultList = INITIAL_USERS.map((u) => ({
       email: u.email.toLowerCase(),
       passwordHash: 'password123',
@@ -97,13 +104,15 @@ export const mockAuthService = {
 
     // Verify Admin Access Code if registering with admin role
     if (assignedRole === 'admin') {
-      const validCodes = ['TASKFLOW-ADMIN-2025', 'ADMIN2025', 'ADMIN@123', 'ADMIN123'];
-      const enteredCode = (data.adminAccessCode || '').trim().toUpperCase();
+      const configuredCode = (import.meta.env.VITE_ADMIN_ACCESS_CODE || '').trim();
+      const enteredCode = (data.adminAccessCode || '').trim();
+
       if (!enteredCode) {
         throw new Error('Admin Access Code is required to create an admin account.');
       }
-      if (!validCodes.includes(enteredCode)) {
-        throw new Error('Invalid Admin Access Code. Enter an authorized code (e.g. ADMIN2025) to proceed.');
+
+      if (configuredCode && enteredCode !== configuredCode) {
+        throw new Error('Invalid Admin Access Code. Please enter the correct authorization code.');
       }
     }
 

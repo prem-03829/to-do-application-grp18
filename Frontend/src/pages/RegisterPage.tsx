@@ -7,7 +7,7 @@ import { useAuth } from '../context/AuthContext';
 import { UserRole } from '../types';
 import { Input } from '../components/ui/Input';
 import { Button } from '../components/ui/Button';
-import { Layers, Eye, EyeOff, Check, X, User, ShieldCheck, Key, ShieldAlert } from 'lucide-react';
+import { Layers, Eye, EyeOff, Check, X, User, ShieldCheck, Key } from 'lucide-react';
 import { toast } from 'sonner';
 
 const registerSchema = z
@@ -184,19 +184,9 @@ export const RegisterPage: React.FC = () => {
             {/* Admin Access Code Field (Required only for Admin role) */}
             {selectedRole === 'admin' && (
               <div className="p-3.5 rounded-xl bg-gradient-to-br from-indigo-50/80 via-purple-50/40 to-slate-50 border border-indigo-200/90 space-y-2.5 transition-all">
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-1.5 text-xs font-bold text-indigo-950">
-                    <Key className="w-3.5 h-3.5 text-indigo-600" />
-                    <span>Admin Authorization Code</span>
-                  </div>
-                  <button
-                    type="button"
-                    onClick={() => setValue('adminAccessCode', 'ADMIN2025', { shouldValidate: true })}
-                    className="text-[10px] font-semibold text-indigo-700 hover:text-indigo-800 bg-white px-2 py-0.5 rounded-md border border-indigo-200 shadow-2xs hover:bg-indigo-50 transition-colors cursor-pointer"
-                    title="Fill the demo authorization code"
-                  >
-                    Use Demo Code
-                  </button>
+                <div className="flex items-center gap-1.5 text-xs font-bold text-indigo-950">
+                  <Key className="w-3.5 h-3.5 text-indigo-600" />
+                  <span>Admin Authorization Code</span>
                 </div>
 
                 <div className="relative">
@@ -217,20 +207,13 @@ export const RegisterPage: React.FC = () => {
                     {...register('adminAccessCode')}
                   />
                 </div>
-
-                <div className="flex items-center gap-1.5 text-[11px] text-indigo-800 bg-indigo-100/50 p-2 rounded-lg border border-indigo-200/60">
-                  <ShieldAlert className="w-3.5 h-3.5 text-indigo-600 shrink-0" />
-                  <span>
-                    Demo access code is <strong className="font-mono font-bold text-indigo-900 bg-white px-1 py-0.5 rounded border border-indigo-200">ADMIN2025</strong>
-                  </span>
-                </div>
               </div>
             )}
 
             {/* Full Name */}
             <Input
               label="Full name"
-              placeholder="e.g. Rushikesh Jagtap"
+              placeholder="Enter your full name"
               error={errors.name?.message}
               {...register('name')}
             />
