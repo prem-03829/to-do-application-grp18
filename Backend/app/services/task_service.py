@@ -9,6 +9,11 @@ def get_user_task(task_id: int, user_id: int):
     return Task.query.filter_by(id=task_id, user_id=user_id).first()
 
 
+def get_task_by_id(task_id: int):
+    """Retrieve a single task by ID."""
+    return db.session.get(Task, task_id)
+
+
 def category_id_for(user_id: int, name: str):
     """The frontend sends a category name; find or create it and return its id."""
     name = (name or "").strip()[:100]
