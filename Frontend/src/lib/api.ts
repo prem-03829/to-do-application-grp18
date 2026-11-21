@@ -27,7 +27,7 @@ apiClient.interceptors.request.use(
 // Response interceptor for centralized error handling
 apiClient.interceptors.response.use(
   (response) => response,
-  (error: AxiosError<{ message?: string }>) => {
+  (error: AxiosError<{ message?: string; error?: string }>) => {
     if (error.response?.status === 401) {
       // Clear expired token and trigger redirect if not already on auth page
       if (!window.location.pathname.includes('/login') && !window.location.pathname.includes('/register')) {
@@ -36,7 +36,8 @@ apiClient.interceptors.response.use(
         window.location.href = '/login?expired=true';
       }
     }
-    const message = error.response?.data?.message || error.message || 'An unexpected error occurred';
+    const data = error.response?.data;
+    const message = data?.error || data?.message || error.message || 'An unexpected error occurred';
     return Promise.reject(new Error(message));
   }
 );
